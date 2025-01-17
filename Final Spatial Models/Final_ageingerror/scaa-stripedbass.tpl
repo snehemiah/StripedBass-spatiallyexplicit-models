@@ -1,122 +1,185 @@
-#ifdef DEBUG
-  #ifndef __SUNPRO_C
-    #include <cfenv>
-    #include <cstdlib>
-  #endif
-#endif
-#include <admodel.h>
-#include <contrib.h>
+//Program Name/Description: Simulation of Spatially explicit statistical catch at age model for Striped bass
+//Written By: Samara Nehemiah
+//Date Created: 7/26/2022
+//Last Modified By: Samara
+//Last Modified: 10/29/22
 
-  extern "C"  {
-    void ad_boundf(int i);
-  }
-#include <scaa-stripedbass.htp>
 
-model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
-{
-  fdyear.allocate("fdyear");
-  ldyear.allocate("ldyear");
-  fmyear.allocate("fmyear");
-  lmyear.allocate("lmyear");
-  fage.allocate("fage");
-  lage.allocate("lage");
-  nyrs.allocate("nyrs");
-  fleet.allocate("fleet");
-  region.allocate("region");
-  tstep.allocate("tstep");
-  stock.allocate("stock");
-  nsurv.allocate("nsurv");
-  age1surv.allocate("age1surv");
-  yoysurv_coast.allocate("yoysurv_coast");
-  yoysurv_bay.allocate("yoysurv_bay");
-  tblock.allocate("tblock");
-  ftyear.allocate(1,tblock,"ftyear");
-  lbound.allocate("lbound");
-  ubound.allocate("ubound");
-  obs_C.allocate(1,region,1,tstep,fdyear,ldyear,"obs_C");
-  obs_Cp.allocate(1,region,1,tstep,fdyear,ldyear,fage,lage,"obs_Cp");
-  obs_CV.allocate(1,region,1,tstep,fdyear,ldyear,"obs_CV");
-  sfage_a.allocate("sfage_a");
-  sfage_b.allocate("sfage_b");
-  sfage_c.allocate("sfage_c");
-  slage_a.allocate("slage_a");
-  slage_b.allocate("slage_b");
-  slage_c.allocate("slage_c");
-  obs_I_md.allocate(fdyear,ldyear,"obs_I_md");
-  obs_I_ny.allocate(fdyear,ldyear,"obs_I_ny");
-  obs_I_nj.allocate(fdyear,ldyear,"obs_I_nj");
-  obs_I_des.allocate(fdyear,ldyear,"obs_I_des");
-  obs_I_de30.allocate(fdyear,ldyear,"obs_I_de30");
-  obs_I_cm.allocate(1,tstep,fdyear,ldyear,"obs_I_cm");
-  obs_I_ct.allocate(1,tstep,fdyear,ldyear,"obs_I_ct");
-  obs_Ip_md.allocate(fdyear,ldyear,sfage_b,slage_b,"obs_Ip_md");
-  obs_Ip_ny.allocate(fdyear,ldyear,sfage_c,slage_c,"obs_Ip_ny");
-  obs_Ip_nj.allocate(fdyear,ldyear,sfage_b,slage_b,"obs_Ip_nj");
-  obs_Ip_des.allocate(fdyear,ldyear,sfage_c,slage_c,"obs_Ip_des");
-  obs_Ip_de30.allocate(fdyear,ldyear,sfage_a,slage_a,"obs_Ip_de30");
-  obs_Ip_cm.allocate(1,tstep,fdyear,ldyear,sfage_a,slage_a,"obs_Ip_cm");
-  obs_Ip_ct.allocate(1,tstep,fdyear,ldyear,sfage_a,slage_a,"obs_Ip_ct");
-  obs_I_CV_cm.allocate(1,tstep,fdyear,ldyear,"obs_I_CV_cm");
-  obs_I_CV_de30.allocate(fdyear,ldyear,"obs_I_CV_de30");
-  obs_I_CV_ct.allocate(1,tstep,fdyear,ldyear,"obs_I_CV_ct");
-  obs_I_CV_md.allocate(fdyear,ldyear,"obs_I_CV_md");
-  obs_I_CV_nj.allocate(fdyear,ldyear,"obs_I_CV_nj");
-  obs_I_CV_des.allocate(fdyear,ldyear,"obs_I_CV_des");
-  obs_I_CV_ny.allocate(fdyear,ldyear,"obs_I_CV_ny");
-  obs_I_age1n.allocate(1,age1surv,fdyear,ldyear,"obs_I_age1n");
-  obs_I_age1m.allocate(fdyear,ldyear,"obs_I_age1m");
-  obs_I_age1n_CV.allocate(1,age1surv,fdyear,ldyear,"obs_I_age1n_CV");
-  obs_I_age1m_CV.allocate(fdyear,ldyear,"obs_I_age1m_CV");
-  obs_I_yoy_coast.allocate(1,yoysurv_coast,fdyear,ldyear,"obs_I_yoy_coast");
-  obs_I_yoy_bay.allocate(1,yoysurv_bay,fdyear,ldyear,"obs_I_yoy_bay");
-  obs_I_yoy_CV_coast.allocate(1,yoysurv_coast,fdyear,ldyear,"obs_I_yoy_CV_coast");
-  obs_I_yoy_CV_bay.allocate(1,yoysurv_bay,fdyear,ldyear,"obs_I_yoy_CV_bay");
-  w_age.allocate(fdyear,ldyear,fage,lage,"w_age");
-  ssbw_age.allocate(fdyear,ldyear,fage,lage,"ssbw_age");
-  rw_age.allocate(fdyear,ldyear,fage,lage,"rw_age");
-  m_age.allocate(fage,lage,"m_age");
-  M.allocate(fage,lage,"M");
-  sex.allocate(fage,lage,"sex");
-  prop_bay.allocate(1,tstep,fage+1,lage,"prop_bay");
-  prop_coast.allocate(1,tstep,fage+1,lage,"prop_coast");
-  log_sd_bay.allocate(1,tstep,fage+1,lage,"log_sd_bay");
-  log_sd_coast.allocate(1,tstep,fage+1,lage,"log_sd_coast");
-  acoustic_prop.allocate(1,tstep,fage+1,lage,"acoustic_prop");
-  acoustic_prop_sd.allocate(1,tstep,fage+1,lage,"acoustic_prop_sd");
-  use_aco_prop.allocate("use_aco_prop");
-  use_age_err.allocate("use_age_err");
-  age_err_a.allocate(fage,lage,fage,lage,"age_err_a");
-  age_err_b.allocate(sfage_b,slage_b,sfage_b,slage_b,"age_err_b");
-  age_err_c.allocate(sfage_c,slage_c,sfage_c,slage_c,"age_err_c");
-  age_err_a_id.allocate(fage,lage,fage,lage,"age_err_a_id");
-  age_err_b_id.allocate(sfage_b,slage_b,sfage_b,slage_b,"age_err_b_id");
-  age_err_c_id.allocate(sfage_c,slage_c,sfage_c,slage_c,"age_err_c_id");
-  ESS_C_bay.allocate(1,2,"ESS_C_bay");
-  ESS_C_ac.allocate("ESS_C_ac");
-  ESS_I_cm.allocate("ESS_I_cm");
-  ESS_I_de30.allocate("ESS_I_de30");
-  ESS_I_ct.allocate("ESS_I_ct");
-  ESS_I_md.allocate("ESS_I_md");
-  ESS_I_nj.allocate("ESS_I_nj");
-  ESS_I_des.allocate("ESS_I_des");
-  ESS_I_ny.allocate("ESS_I_ny");
-  test.allocate("test");
-  C_var.allocate(1,region,1,tstep,fmyear,lmyear);
-  I_var_cm.allocate(1,tstep,fmyear,lmyear);
-  I_var_de30.allocate(fmyear,lmyear);
-  I_var_ct.allocate(1,tstep,fmyear,lmyear);
-  I_var_md.allocate(fmyear,lmyear);
-  I_var_nj.allocate(fmyear,lmyear);
-  I_var_des.allocate(fmyear,lmyear);
-  I_var_ny.allocate(fmyear,lmyear);
-  I_var_age1.allocate(1,age1surv,fmyear,lmyear);
-  I_var_age1n.allocate(1,age1surv,fmyear,lmyear);
-  I_var_age1m.allocate(fmyear,lmyear);
-  I_var_yoy_coast.allocate(1,yoysurv_coast,fmyear,lmyear);
-  I_var_yoy_bay.allocate(1,yoysurv_bay,fmyear,lmyear);
-  mod_age_err_a.allocate(sfage_a,slage_a,sfage_a,slage_a);
-  mod_age_err_b.allocate(sfage_b,slage_b,sfage_b,slage_b);
-  mod_age_err_c.allocate(sfage_c,slage_c,sfage_c,slage_c);
+TOP_OF_MAIN_SECTION
+  gradient_structure::set_MAX_NVAR_OFFSET(1000);
+  gradient_structure::set_NUM_DEPENDENT_VARIABLES(100000);
+  gradient_structure::set_GRADSTACK_BUFFER_SIZE(100000);
+  gradient_structure::set_CMPDIF_BUFFER_SIZE(1000000);
+  arrmblsize=900000;
+
+DATA_SECTION
+
+  init_int fdyear  //first year for data
+  init_int ldyear  //last year for data
+
+  init_int fmyear  //first year for model
+  init_int lmyear  //last year for model
+
+  init_int fage  //first age
+  init_int lage  //last age
+
+  init_int nyrs //number of years in survey
+
+  init_int fleet //number of fleets (coast and bay)
+  init_int region //number of spatial regions
+  init_int tstep //number of time steps in a year (jan-jun and jul-dec)
+  init_int stock //number of stocks we are modeling (Ches Bay and Other)
+  init_int nsurv //number of surveys, separated by time step = 9
+  
+  init_int age1surv //number of age 1 survey in FAA model
+  //init_int nage1 //number of age 1 in spatial model
+  init_int yoysurv_coast //number of yoy survey in the coast
+  init_int yoysurv_bay //number of yoy surveys in the bay
+
+  init_int tblock //number of time blocks for fishing selectivity
+  init_vector ftyear(1,tblock) //first year of each time block
+
+  init_int lbound //lower bound of log_fs for cb
+  init_int ubound //upper bound of log_fs for cb
+
+  init_3darray obs_C(1,region,1,tstep,fdyear,ldyear) //observed total catch for each year
+  init_4darray obs_Cp(1,region,1,tstep,fdyear,ldyear,fage,lage) //observed proportions at age in the catch
+  init_3darray obs_CV(1,region,1,tstep,fdyear,ldyear)  //coefficient of variation
+
+  init_int sfage_a // first age to use in proportions at age likelihood for nsurv_a
+  init_int sfage_b // first age to use in proportions at age likelihood for nsurv_b
+  init_int sfage_c // first age to use in proportions at age likelihood for nsurv_c
+  init_int slage_a //last age to use in proportions at age likelihood for nsurv_a
+  init_int slage_b //last age to use in proportions at age likelihood for nsurv_b
+  init_int slage_c //last age to use in proportions at age likelihood for nsru_c
+
+  //spatial observed index of abundance
+  init_vector obs_I_md(fdyear,ldyear)
+  init_vector obs_I_ny(fdyear,ldyear)
+  init_vector obs_I_nj(fdyear,ldyear)
+  init_vector obs_I_des(fdyear,ldyear)
+  init_vector obs_I_de30(fdyear,ldyear)
+  init_matrix obs_I_cm(1,tstep,fdyear,ldyear)
+  init_matrix obs_I_ct(1,tstep,fdyear,ldyear)
+
+  //spatial observed proportions at age for the survey
+  init_matrix obs_Ip_md(fdyear,ldyear,sfage_b,slage_b)
+  init_matrix obs_Ip_ny(fdyear,ldyear,sfage_c,slage_c)
+  init_matrix obs_Ip_nj(fdyear,ldyear,sfage_b,slage_b)
+  init_matrix obs_Ip_des(fdyear,ldyear,sfage_c,slage_c)
+  init_matrix obs_Ip_de30(fdyear,ldyear,sfage_a,slage_a)
+  init_3darray obs_Ip_cm(1,tstep,fdyear,ldyear,sfage_a,slage_a)
+  init_3darray obs_Ip_ct(1,tstep,fdyear,ldyear,sfage_a,slage_a)
+
+  //spatial observed CV for the survey
+  init_matrix obs_I_CV_cm(1,tstep,fdyear,ldyear)//using same CV for both timesteps
+  init_vector obs_I_CV_de30(fdyear,ldyear)
+  init_matrix obs_I_CV_ct(1,tstep,fdyear,ldyear)//using same CV for both time steps
+  init_vector obs_I_CV_md(fdyear,ldyear)
+  init_vector obs_I_CV_nj(fdyear,ldyear)
+  init_vector obs_I_CV_des(fdyear,ldyear)
+  init_vector obs_I_CV_ny(fdyear,ldyear)
+
+  init_matrix obs_I_age1n(1,age1surv,fdyear,ldyear) //observed indices of abudnace for age 1 newyork
+  init_vector obs_I_age1m(fdyear,ldyear) //observed indices of abundance for age 1 maryland
+  init_matrix obs_I_age1n_CV(1,age1surv,fdyear,ldyear) //observed CV for age 1 surveys
+  init_vector obs_I_age1m_CV(fdyear,ldyear)
+
+  init_matrix obs_I_yoy_coast(1,yoysurv_coast,fdyear,ldyear)//observed yoy indices of abudance for the coast
+  init_matrix obs_I_yoy_bay(1,yoysurv_bay,fdyear,ldyear) //observed yoy indices of abundance for bay
+  init_matrix obs_I_yoy_CV_coast(1,yoysurv_coast,fdyear,ldyear)//observed CV for yoy indices coast
+  init_matrix obs_I_yoy_CV_bay(1,yoysurv_bay,fdyear,ldyear)//observed CV for yoy indices bay
+
+  init_matrix w_age(fdyear,ldyear,fage,lage) //average weight at age, in kG
+  init_matrix ssbw_age(fdyear,ldyear,fage,lage) //adjustment of rivard weight to match the time of spawning
+  init_matrix rw_age(fdyear,ldyear,fage,lage) //rivard weight at age
+  init_vector m_age(fage,lage) //maturity at age
+  init_vector M(fage,lage) //assumed natural mortality for all ages
+  init_vector sex(fage,lage) //sex proportions at age
+
+  //Occupancy probabiliies, mark recapture
+  init_matrix prop_bay(1,tstep,fage+1,lage)//log proportion at age for chesapeake bay stock in the Atlantic Coast
+  init_matrix prop_coast(1,tstep,fage+1,lage)//log proportion at age for atlantic coast  stock in the Atlantic Coast
+
+  init_matrix log_sd_bay(1,tstep,fage+1,lage) //bay log sd for occupancy probabilities
+  init_matrix log_sd_coast(1,tstep,fage+1,lage) //coast log sd for occupancy probabilties
+
+  //Occupancy probabilities, acoutic taging for CB fish only
+  init_matrix acoustic_prop(1,tstep,fage+1,lage) //percent time of CB fish in the CB for timestep 1 and 2, caculated from SECOR acoustic
+  init_matrix acoustic_prop_sd(1,tstep,fage+1,lage) //SD for percent time of CB fish in the CB
+
+  init_int use_aco_prop //1, use acoustic driven occupancy, 2, don't use, multiply by 0
+
+  //aging error matrix
+  init_int use_age_err //1, use aging err matrix,0, use identify matrix
+
+  init_matrix age_err_a(fage,lage,fage,lage) //aging error ages 1-15
+  init_matrix age_err_b(sfage_b,slage_b,sfage_b,slage_b) //aging error age 2-15
+  init_matrix age_err_c(sfage_c,slage_c,sfage_c,slage_c) //aging error age 2-13+
+
+  init_matrix age_err_a_id(fage,lage,fage,lage) //identify matrix for age 1-15+
+  init_matrix age_err_b_id(sfage_b,slage_b,sfage_b,slage_b) //identify matrix for age 2-15
+  init_matrix age_err_c_id(sfage_c,slage_c,sfage_c,slage_c) //identity matrix age 2-13+
+
+  init_vector ESS_C_bay(1,2)//effective sample size for catch at age in bay, for the mortatorium and post
+  init_number ESS_C_ac //ESS for catch at age for the atlantic coast
+  //init_number I_sd //log-scale SD for index of abundance
+
+  //effective sample size for the survey index at age
+  init_number ESS_I_cm
+  init_number ESS_I_de30
+  init_number ESS_I_ct
+  init_number ESS_I_md
+  init_number ESS_I_nj
+  init_number ESS_I_des
+  init_number ESS_I_ny
+
+  //init_int ESS_I_mrip
+  
+  init_number test // EOF test number
+
+  3darray C_var(1,region,1,tstep,fmyear,lmyear)  //log-scale variance of catch
+  //matrix I_var_a(1,nsurv_a,fmyear,lmyear) //log-scale variance of index of abundance
+  // matrix I_var_b(1,nsurv_b,fmyear,lmyear) //log-scale variance of index of abundance
+  //matrix I_var_c(1,nsurv_c,fmyear,lmyear) //log-scale variance of index of abundance
+
+  //spatial variance
+  matrix I_var_cm(1,tstep,fmyear,lmyear) //log-scale variance of index of abundance for chesmmap
+  vector I_var_de30(fmyear,lmyear) //log-scale variance of de30 index of abundance
+  matrix I_var_ct(1,tstep,fmyear,lmyear) //log scale variance of ct list
+  vector I_var_md(fmyear,lmyear) //log-scale variance of MDSSN Index of Abundance
+  vector I_var_nj(fmyear,lmyear) //log-scale variance of NJBT index of abundance
+  vector I_var_des(fmyear,lmyear) //log scale variance of DE SSN index of abundance
+  vector I_var_ny(fmyear,lmyear) //log-scale variance of ny ocean haul index of abundance
+
+  matrix I_var_age1(1,age1surv,fmyear,lmyear)//log-scale variance of index of abundance, age 1 surv, FAA
+  //matrix I_var_age1n(1,tstep,fmyear,lmyear)//log-scale variance of index of abundance, age 1 surv ny
+  matrix I_var_age1n(1,age1surv,fmyear,lmyear) //logscale var of ioa for ny, using until I disaggregate NY age 1
+  vector I_var_age1m(fmyear,lmyear)//log-scale variacne of index of abundance, age 1 md
+  matrix I_var_yoy_coast(1,yoysurv_coast,fmyear,lmyear) //log-scale varience of yoy ioa for the caost
+  matrix I_var_yoy_bay(1,yoysurv_bay,fmyear,lmyear)
+
+  matrix mod_age_err_a(sfage_a,slage_a,sfage_a,slage_a)
+  matrix mod_age_err_b(sfage_b,slage_b,sfage_b,slage_b)
+  matrix mod_age_err_c(sfage_c,slage_c,sfage_c,slage_c)
+
+  int a // looping variable for age
+  int y // looping variable for year
+  int s // looping variable for survey
+  int r // looping variable for region(previously fleet)
+  int o //looping variable for age 1 survey
+  int z // looping variable for yoy survey
+  int t // looping variable for time block (fishing reg)
+  int t2 // variable for calculation of abundance across time steps
+  int ts // loooping variable for time step (jan-jun; jul-dec)
+  number d //constant for calculation of proportions at age variance
+
+  int ftbyr //variable for the first year of time block
+  int ftlyr //variable for the last year of time block
+
+  
+
+ LOCAL_CALCS
   if(test!=12345)
   {
     //Write error message and output data to the screen
@@ -189,7 +252,8 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
     cout << "age err a" << endl << age_err_a << endl;
     cout << "age err b" << endl << age_err_b << endl;
     cout << "age error c" << endl <<  age_err_c << endl;
-    //cout << "ESS_C" << endl << ESS_C << endl;
+    cout << "ESS_C_bay" << endl << ESS_C_bay << endl;
+    cout << "ESS_C_ac" << endl << ESS_C_ac << endl;
     cout << "test" << endl << test << endl;
     exit(1);  //exit the program
   }
@@ -242,6 +306,8 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
    I_var_yoy_bay(z)=square(obs_I_yoy_CV_bay(z)(fmyear,lmyear));
   }
   //cout << "i var yoy" << endl;
+
+
   if(use_age_err==1)
   {
     mod_age_err_a=age_err_a;
@@ -259,6 +325,7 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
   //cout << "aging error c" << endl << mod_age_err_c << endl;
   //exit(1);
   //cout << "finishvar calc " << endl;
+  
   /*
   //cout << I_var << endl;
   cout << "data years" << endl << fdyear << endl << ldyear << endl;
@@ -272,761 +339,406 @@ model_data::model_data(int argc,char * argv[]) : ad_comm(argc,argv)
   cout << "obs cm prop at age in survey" << endl << obs_Ip_cm << endl;
   exit(1);
   */
-}
 
-model_parameters::model_parameters(int sz,int argc,char * argv[]) : 
- model_data(argc,argv) , function_minimizer(sz)
-{
-  initializationfunction();
-  log_N0_devs.allocate(fage+1,lage,-10,10,-1,"log_N0_devs");
-  log_sf1_ac.allocate(1,tblock,1,tstep,-2,2,2,"log_sf1_ac");
-  sf1_ac.allocate(1,tblock,1,tstep,"sf1_ac");
-  #ifndef NO_AD_INITIALIZE
-    sf1_ac.initialize();
-  #endif
-  log_sf2_ac.allocate(1,tblock,1,tstep,0,5,2,"log_sf2_ac");
-  sf2_ac.allocate(1,tblock,1,tstep,"sf2_ac");
-  #ifndef NO_AD_INITIALIZE
-    sf2_ac.initialize();
-  #endif
-  log_sf1_cb.allocate(1,tblock,1,tstep,-2,2,2,"log_sf1_cb");
-  sf1_cb.allocate(1,tblock,1,tstep,"sf1_cb");
-  #ifndef NO_AD_INITIALIZE
-    sf1_cb.initialize();
-  #endif
-  log_sf2_cb.allocate(1,tblock,1,tstep,0,5,2,"log_sf2_cb");
-  sf2_cb.allocate(1,tblock,1,tstep,"sf2_cb");
-  #ifndef NO_AD_INITIALIZE
-    sf2_cb.initialize();
-  #endif
-  log_sf3_cb.allocate(1,tblock,1,tstep,-2,2,2,"log_sf3_cb");
-  sf3_cb.allocate(1,tblock,1,tstep,"sf3_cb");
-  #ifndef NO_AD_INITIALIZE
-    sf3_cb.initialize();
-  #endif
-  log_sf4_cb.allocate(1,tblock,1,tstep,0.5,5,2,"log_sf4_cb");
-  sf4_cb.allocate(1,tblock,1,tstep,"sf4_cb");
-  #ifndef NO_AD_INITIALIZE
-    sf4_cb.initialize();
-  #endif
-  log_ssf1_md.allocate(-2,2,3,"log_ssf1_md");
-  ssf1_md.allocate("ssf1_md");
-  #ifndef NO_AD_INITIALIZE
-  ssf1_md.initialize();
-  #endif
-  log_ssf2_md.allocate(0,5,3,"log_ssf2_md");
-  ssf2_md.allocate("ssf2_md");
-  #ifndef NO_AD_INITIALIZE
-  ssf2_md.initialize();
-  #endif
-  log_ssf1_des.allocate(-2,2,3,"log_ssf1_des");
-  ssf1_des.allocate("ssf1_des");
-  #ifndef NO_AD_INITIALIZE
-  ssf1_des.initialize();
-  #endif
-  log_ssf2_des.allocate(0,5,3,"log_ssf2_des");
-  ssf2_des.allocate("ssf2_des");
-  #ifndef NO_AD_INITIALIZE
-  ssf2_des.initialize();
-  #endif
-  log_ssf1_cm.allocate(1,tstep,-2,2,3,"log_ssf1_cm");
-  ssf1_cm.allocate(1,tstep,"ssf1_cm");
-  #ifndef NO_AD_INITIALIZE
-    ssf1_cm.initialize();
-  #endif
-  log_ssf2_cm.allocate(1,tstep,0,5,3,"log_ssf2_cm");
-  ssf2_cm.allocate(1,tstep,"ssf2_cm");
-  #ifndef NO_AD_INITIALIZE
-    ssf2_cm.initialize();
-  #endif
-  log_ssf1_ny.allocate(-2,2,3,"log_ssf1_ny");
-  ssf1_ny.allocate("ssf1_ny");
-  #ifndef NO_AD_INITIALIZE
-  ssf1_ny.initialize();
-  #endif
-  log_ssf2_ny.allocate(0,5,3,"log_ssf2_ny");
-  ssf2_ny.allocate("ssf2_ny");
-  #ifndef NO_AD_INITIALIZE
-  ssf2_ny.initialize();
-  #endif
-  log_ssf3_ny.allocate(-2,2,3,"log_ssf3_ny");
-  ssf3_ny.allocate("ssf3_ny");
-  #ifndef NO_AD_INITIALIZE
-  ssf3_ny.initialize();
-  #endif
-  log_ssf4_ny.allocate(1,5,3,"log_ssf4_ny");
-  ssf4_ny.allocate("ssf4_ny");
-  #ifndef NO_AD_INITIALIZE
-  ssf4_ny.initialize();
-  #endif
-  log_ssf1_nj.allocate(-2,2,3,"log_ssf1_nj");
-  ssf1_nj.allocate("ssf1_nj");
-  #ifndef NO_AD_INITIALIZE
-  ssf1_nj.initialize();
-  #endif
-  log_ssf2_nj.allocate(0,5,3,"log_ssf2_nj");
-  ssf2_nj.allocate("ssf2_nj");
-  #ifndef NO_AD_INITIALIZE
-  ssf2_nj.initialize();
-  #endif
-  log_ssf3_nj.allocate(-2,2,3,"log_ssf3_nj");
-  ssf3_nj.allocate("ssf3_nj");
-  #ifndef NO_AD_INITIALIZE
-  ssf3_nj.initialize();
-  #endif
-  log_ssf4_nj.allocate(1,5,3,"log_ssf4_nj");
-  ssf4_nj.allocate("ssf4_nj");
-  #ifndef NO_AD_INITIALIZE
-  ssf4_nj.initialize();
-  #endif
-  log_ssf1_de30.allocate(-2,2,3,"log_ssf1_de30");
-  ssf1_de30.allocate("ssf1_de30");
-  #ifndef NO_AD_INITIALIZE
-  ssf1_de30.initialize();
-  #endif
-  log_ssf2_de30.allocate(0,5,3,"log_ssf2_de30");
-  ssf2_de30.allocate("ssf2_de30");
-  #ifndef NO_AD_INITIALIZE
-  ssf2_de30.initialize();
-  #endif
-  log_ssf3_de30.allocate(-4,2,3,"log_ssf3_de30");
-  ssf3_de30.allocate("ssf3_de30");
-  #ifndef NO_AD_INITIALIZE
-  ssf3_de30.initialize();
-  #endif
-  log_ssf4_de30.allocate(1,5,3,"log_ssf4_de30");
-  ssf4_de30.allocate("ssf4_de30");
-  #ifndef NO_AD_INITIALIZE
-  ssf4_de30.initialize();
-  #endif
-  log_ssf1_ct.allocate(1,tstep,-2,2,3,"log_ssf1_ct");
-  ssf1_ct.allocate(1,tstep,"ssf1_ct");
-  #ifndef NO_AD_INITIALIZE
-    ssf1_ct.initialize();
-  #endif
-  log_ssf2_ct.allocate(1,tstep,0,5,3,"log_ssf2_ct");
-  ssf2_ct.allocate(1,tstep,"ssf2_ct");
-  #ifndef NO_AD_INITIALIZE
-    ssf2_ct.initialize();
-  #endif
-  log_ssf3_ct.allocate(1,tstep,-2,2,3,"log_ssf3_ct");
-  ssf3_ct.allocate(1,tstep,"ssf3_ct");
-  #ifndef NO_AD_INITIALIZE
-    ssf3_ct.initialize();
-  #endif
-  log_ssf4_ct.allocate(1,tstep,1,5,3,"log_ssf4_ct");
-  ssf4_ct.allocate(1,tstep,"ssf4_ct");
-  #ifndef NO_AD_INITIALIZE
-    ssf4_ct.initialize();
-  #endif
-  log_a_sf1.allocate(-2,2,2,"log_a_sf1");
-  log_a_sf2.allocate(0,5,2,"log_a_sf2");
-  a_sf1.allocate("a_sf1");
-  #ifndef NO_AD_INITIALIZE
-  a_sf1.initialize();
-  #endif
-  a_sf2.allocate("a_sf2");
-  #ifndef NO_AD_INITIALIZE
-  a_sf2.initialize();
-  #endif
-  log_q_md.allocate(1,"log_q_md");
-  log_q_cm.allocate(1,tstep,1,"log_q_cm");
-  log_q_ct.allocate(1,tstep,1,"log_q_ct");
-  log_q_ny.allocate(1,"log_q_ny");
-  log_q_nj.allocate(1,"log_q_nj");
-  log_q_des.allocate(1,"log_q_des");
-  log_q_de30.allocate(1,"log_q_de30");
-  q_md.allocate("q_md");
-  #ifndef NO_AD_INITIALIZE
-  q_md.initialize();
-  #endif
-  q_cm.allocate("q_cm");
-  q_ct.allocate("q_ct");
-  q_ny.allocate("q_ny");
-  #ifndef NO_AD_INITIALIZE
-  q_ny.initialize();
-  #endif
-  q_nj.allocate("q_nj");
-  #ifndef NO_AD_INITIALIZE
-  q_nj.initialize();
-  #endif
-  q_des.allocate("q_des");
-  #ifndef NO_AD_INITIALIZE
-  q_des.initialize();
-  #endif
-  q_de30.allocate("q_de30");
-  #ifndef NO_AD_INITIALIZE
-  q_de30.initialize();
-  #endif
-  log_q_age1n.allocate(1,"log_q_age1n");
-  log_q_age1m.allocate(1,"log_q_age1m");
-  log_q_yoy_coast.allocate(1,yoysurv_coast,1,"log_q_yoy_coast");
-  log_q_yoy_bay.allocate(1,yoysurv_bay,1,"log_q_yoy_bay");
-  log_R.allocate(1,region,0,20,1,"log_R");
-  log_Rdevs1.allocate(fmyear,lmyear,-10,10,1,"log_Rdevs1");
-  log_Rdevs2.allocate(fmyear,lmyear,-10,10,1,"log_Rdevs2");
-  log_Feq.allocate(1,stock,-5,2,2,"log_Feq");
-  log_F.allocate(1,region,1,tstep,-5,2,2,"log_F");
-  log_Fdevs_r1t1.allocate(fmyear,lmyear,-15,15,2,"log_Fdevs_r1t1");
-  log_Fdevs_r1t2.allocate(fmyear,lmyear,-15,15,2,"log_Fdevs_r1t2");
-  log_Fdevs_r2t1.allocate(fmyear,lmyear,-15,15,2,"log_Fdevs_r2t1");
-  log_Fdevs_r2t2.allocate(fmyear,lmyear,-15,15,2,"log_Fdevs_r2t2");
-  Feq.allocate(1,stock,fage,lage,"Feq");
-  #ifndef NO_AD_INITIALIZE
-    Feq.initialize();
-  #endif
-  Nt.allocate(1,stock,1,tstep,fmyear,lmyear,fage,lage,"Nt");
-  #ifndef NO_AD_INITIALIZE
-    Nt.initialize();
-  #endif
-  N.allocate(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage,"N");
-  #ifndef NO_AD_INITIALIZE
-    N.initialize();
-  #endif
-  N_region.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"N_region");
-  #ifndef NO_AD_INITIALIZE
-    N_region.initialize();
-  #endif
-  Nbay.allocate(1,tstep,fmyear,lmyear,fage,lage,"Nbay");
-  #ifndef NO_AD_INITIALIZE
-    Nbay.initialize();
-  #endif
-  Ncoast.allocate(1,tstep,fmyear,lmyear,fage,lage,"Ncoast");
-  #ifndef NO_AD_INITIALIZE
-    Ncoast.initialize();
-  #endif
-  Z.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"Z");
-  #ifndef NO_AD_INITIALIZE
-    Z.initialize();
-  #endif
-  F.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"F");
-  #ifndef NO_AD_INITIALIZE
-    F.initialize();
-  #endif
-  Fbar.allocate(1,stock,fmyear,lmyear,fage,lage,"Fbar");
-  #ifndef NO_AD_INITIALIZE
-    Fbar.initialize();
-  #endif
-  Fplus.allocate(1,stock,fmyear,lmyear,"Fplus");
-  #ifndef NO_AD_INITIALIZE
-    Fplus.initialize();
-  #endif
-  Freg_7plus.allocate(1,region,1,tstep,fmyear,lmyear,7,lage,"Freg_7plus");
-  #ifndef NO_AD_INITIALIZE
-    Freg_7plus.initialize();
-  #endif
-  fsel.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"fsel");
-  #ifndef NO_AD_INITIALIZE
-    fsel.initialize();
-  #endif
-  log_fsel.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"log_fsel");
-  #ifndef NO_AD_INITIALIZE
-    log_fsel.initialize();
-  #endif
-  afsel.allocate(fage,lage,"afsel");
-  #ifndef NO_AD_INITIALIZE
-    afsel.initialize();
-  #endif
-  log_afsel.allocate(fage,lage,"log_afsel");
-  #ifndef NO_AD_INITIALIZE
-    log_afsel.initialize();
-  #endif
-  ssel_md.allocate(sfage_b,slage_b,"ssel_md");
-  #ifndef NO_AD_INITIALIZE
-    ssel_md.initialize();
-  #endif
-  ssel_cm.allocate(1,tstep,sfage_a,slage_a,"ssel_cm");
-  #ifndef NO_AD_INITIALIZE
-    ssel_cm.initialize();
-  #endif
-  ssel_ct.allocate(1,tstep,sfage_a,slage_a,"ssel_ct");
-  #ifndef NO_AD_INITIALIZE
-    ssel_ct.initialize();
-  #endif
-  ssel_ny.allocate(sfage_c,slage_c,"ssel_ny");
-  #ifndef NO_AD_INITIALIZE
-    ssel_ny.initialize();
-  #endif
-  ssel_nj.allocate(sfage_b,slage_b,"ssel_nj");
-  #ifndef NO_AD_INITIALIZE
-    ssel_nj.initialize();
-  #endif
-  ssel_des.allocate(sfage_c,slage_c,"ssel_des");
-  #ifndef NO_AD_INITIALIZE
-    ssel_des.initialize();
-  #endif
-  ssel_de30.allocate(sfage_a,slage_a,"ssel_de30");
-  #ifndef NO_AD_INITIALIZE
-    ssel_de30.initialize();
-  #endif
-  q_age1n.allocate("q_age1n");
-  #ifndef NO_AD_INITIALIZE
-  q_age1n.initialize();
-  #endif
-  q_age1m.allocate("q_age1m");
-  #ifndef NO_AD_INITIALIZE
-  q_age1m.initialize();
-  #endif
-  q_yoy_coast.allocate(1,yoysurv_coast,"q_yoy_coast");
-  #ifndef NO_AD_INITIALIZE
-    q_yoy_coast.initialize();
-  #endif
-  q_yoy_bay.allocate(1,yoysurv_bay,"q_yoy_bay");
-  #ifndef NO_AD_INITIALIZE
-    q_yoy_bay.initialize();
-  #endif
-  q_age1.allocate(1,age1surv,"q_age1");
-  #ifndef NO_AD_INITIALIZE
-    q_age1.initialize();
-  #endif
-  est_C.allocate(1,stock,1,region,1,tstep,fmyear,lmyear,"est_C");
-  #ifndef NO_AD_INITIALIZE
-    est_C.initialize();
-  #endif
-  est_region_C.allocate(1,region,1,tstep,fmyear,lmyear,"est_region_C");
-  #ifndef NO_AD_INITIALIZE
-    est_region_C.initialize();
-  #endif
-  est_C_age.allocate(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage,"est_C_age");
-  #ifndef NO_AD_INITIALIZE
-    est_C_age.initialize();
-  #endif
-  est_C_age_err.allocate(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage,"est_C_age_err");
-  #ifndef NO_AD_INITIALIZE
-    est_C_age_err.initialize();
-  #endif
-  est_totC_age.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"est_totC_age");
-  #ifndef NO_AD_INITIALIZE
-    est_totC_age.initialize();
-  #endif
-  est_totC_age_err.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"est_totC_age_err");
-  #ifndef NO_AD_INITIALIZE
-    est_totC_age_err.initialize();
-  #endif
-  est_Cp.allocate(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage,"est_Cp");
-  #ifndef NO_AD_INITIALIZE
-    est_Cp.initialize();
-  #endif
-  est_region_Cp.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"est_region_Cp");
-  #ifndef NO_AD_INITIALIZE
-    est_region_Cp.initialize();
-  #endif
-  sigma2_Cp.allocate(1,region,1,tstep,fmyear,lmyear,fage,lage,"sigma2_Cp");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Cp.initialize();
-  #endif
-  ESS_C.allocate(1,region,fmyear,lmyear,"ESS_C");
-  #ifndef NO_AD_INITIALIZE
-    ESS_C.initialize();
-  #endif
-  est_I_age_md.allocate(fmyear,lmyear,sfage_b,slage_b,"est_I_age_md");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_md.initialize();
-  #endif
-  est_I_age_md_err.allocate(fmyear,lmyear,sfage_b,slage_b,"est_I_age_md_err");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_md_err.initialize();
-  #endif
-  est_Ip_md.allocate(fmyear,lmyear,sfage_b,slage_b,"est_Ip_md");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_md.initialize();
-  #endif
-  est_I_md.allocate(fmyear,lmyear,"est_I_md");
-  #ifndef NO_AD_INITIALIZE
-    est_I_md.initialize();
-  #endif
-  sigma2_Ip_md.allocate(fmyear,lmyear,sfage_b,slage_b,"sigma2_Ip_md");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_md.initialize();
-  #endif
-  est_I_age_cm.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"est_I_age_cm");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_cm.initialize();
-  #endif
-  est_Ip_cm.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"est_Ip_cm");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_cm.initialize();
-  #endif
-  est_I_cm.allocate(1,tstep,fmyear,lmyear,"est_I_cm");
-  #ifndef NO_AD_INITIALIZE
-    est_I_cm.initialize();
-  #endif
-  sigma2_Ip_cm.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"sigma2_Ip_cm");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_cm.initialize();
-  #endif
-  est_I_age_ct.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"est_I_age_ct");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_ct.initialize();
-  #endif
-  est_I_age_ct_err.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"est_I_age_ct_err");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_ct_err.initialize();
-  #endif
-  est_Ip_ct.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"est_Ip_ct");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_ct.initialize();
-  #endif
-  est_I_ct.allocate(1,tstep,fmyear,lmyear,"est_I_ct");
-  #ifndef NO_AD_INITIALIZE
-    est_I_ct.initialize();
-  #endif
-  sigma2_Ip_ct.allocate(1,tstep,fmyear,lmyear,sfage_a,slage_a,"sigma2_Ip_ct");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_ct.initialize();
-  #endif
-  est_I_age_ny.allocate(fmyear,lmyear,sfage_c,slage_c,"est_I_age_ny");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_ny.initialize();
-  #endif
-  est_I_age_ny_err.allocate(fmyear,lmyear,sfage_c,slage_c,"est_I_age_ny_err");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_ny_err.initialize();
-  #endif
-  est_Ip_ny.allocate(fmyear,lmyear,sfage_c,slage_c,"est_Ip_ny");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_ny.initialize();
-  #endif
-  est_I_ny.allocate(fmyear,lmyear,"est_I_ny");
-  #ifndef NO_AD_INITIALIZE
-    est_I_ny.initialize();
-  #endif
-  sigma2_Ip_ny.allocate(fmyear,lmyear,sfage_c,slage_c,"sigma2_Ip_ny");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_ny.initialize();
-  #endif
-  est_I_age_nj.allocate(fmyear,lmyear,sfage_b,slage_b,"est_I_age_nj");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_nj.initialize();
-  #endif
-  est_I_age_nj_err.allocate(fmyear,lmyear,sfage_b,slage_b,"est_I_age_nj_err");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_nj_err.initialize();
-  #endif
-  est_Ip_nj.allocate(fmyear,lmyear,sfage_b,slage_b,"est_Ip_nj");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_nj.initialize();
-  #endif
-  est_I_nj.allocate(fmyear,lmyear,"est_I_nj");
-  #ifndef NO_AD_INITIALIZE
-    est_I_nj.initialize();
-  #endif
-  sigma2_Ip_nj.allocate(fmyear,lmyear,sfage_b,slage_b,"sigma2_Ip_nj");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_nj.initialize();
-  #endif
-  est_I_age_des.allocate(fmyear,lmyear,sfage_c,slage_c,"est_I_age_des");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_des.initialize();
-  #endif
-  est_I_age_des_err.allocate(fmyear,lmyear,sfage_c,slage_c,"est_I_age_des_err");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_des_err.initialize();
-  #endif
-  est_Ip_des.allocate(fmyear,lmyear,sfage_c,slage_c,"est_Ip_des");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_des.initialize();
-  #endif
-  est_I_des.allocate(fmyear,lmyear,"est_I_des");
-  #ifndef NO_AD_INITIALIZE
-    est_I_des.initialize();
-  #endif
-  sigma2_Ip_des.allocate(fmyear,lmyear,sfage_c,slage_c,"sigma2_Ip_des");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_des.initialize();
-  #endif
-  est_I_age_de30.allocate(fmyear,lmyear,sfage_a,slage_a,"est_I_age_de30");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age_de30.initialize();
-  #endif
-  est_Ip_de30.allocate(fmyear,lmyear,sfage_a,slage_a,"est_Ip_de30");
-  #ifndef NO_AD_INITIALIZE
-    est_Ip_de30.initialize();
-  #endif
-  est_I_de30.allocate(fmyear,lmyear,"est_I_de30");
-  #ifndef NO_AD_INITIALIZE
-    est_I_de30.initialize();
-  #endif
-  sigma2_Ip_de30.allocate(fmyear,lmyear,sfage_a,slage_a,"sigma2_Ip_de30");
-  #ifndef NO_AD_INITIALIZE
-    sigma2_Ip_de30.initialize();
-  #endif
-  est_I_age1n.allocate(1,age1surv,fmyear,lmyear,"est_I_age1n");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age1n.initialize();
-  #endif
-  est_I_age1m.allocate(fmyear,lmyear,"est_I_age1m");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age1m.initialize();
-  #endif
-  est_I_yoy_coast.allocate(1,yoysurv_coast,fmyear,lmyear,"est_I_yoy_coast");
-  #ifndef NO_AD_INITIALIZE
-    est_I_yoy_coast.initialize();
-  #endif
-  est_I_yoy_bay.allocate(1,yoysurv_bay,fmyear,lmyear,"est_I_yoy_bay");
-  #ifndef NO_AD_INITIALIZE
-    est_I_yoy_bay.initialize();
-  #endif
-  est_I_age1.allocate(1,age1surv,fmyear,lmyear,"est_I_age1");
-  #ifndef NO_AD_INITIALIZE
-    est_I_age1.initialize();
-  #endif
-  rw.allocate(fmyear,lmyear,fage,lage,"rw");
-  #ifndef NO_AD_INITIALIZE
-    rw.initialize();
-  #endif
-  SSB_w.allocate(fmyear,lmyear,fage,lage,"SSB_w");
-  #ifndef NO_AD_INITIALIZE
-    SSB_w.initialize();
-  #endif
-  B.allocate(1,stock,1,region,fmyear,lmyear,"B");
-  #ifndef NO_AD_INITIALIZE
-    B.initialize();
-  #endif
-  SSB.allocate(1,stock,1,region,fmyear,lmyear,"SSB");
-  #ifndef NO_AD_INITIALIZE
-    SSB.initialize();
-  #endif
-  J_w.allocate(fmyear,lmyear,"J_w");
-  #ifndef NO_AD_INITIALIZE
-    J_w.initialize();
-  #endif
-  log_prop_bay.allocate(1,tstep,fage+1,lage,-10,0,5,"log_prop_bay");
-  log_prop_coast.allocate(1,tstep,fage+1,lage,-10,0,5,"log_prop_coast");
-  prop.allocate(1,stock,1,tstep,1,region,fage,lage,"prop");
-  #ifndef NO_AD_INITIALIZE
-    prop.initialize();
-  #endif
-  Ntot_cb.allocate(fmyear,lmyear,"Ntot_cb");
-  Ntot_ac.allocate(fmyear,lmyear,"Ntot_ac");
-  N_cbincb1.allocate(fmyear,lmyear,"N_cbincb1");
-  N_cbincb2.allocate(fmyear,lmyear,"N_cbincb2");
-  N_cbinac1.allocate(fmyear,lmyear,"N_cbinac1");
-  N_cbinac2.allocate(fmyear,lmyear,"N_cbinac2");
-  N_acincb1.allocate(fmyear,lmyear,"N_acincb1");
-  N_acincb2.allocate(fmyear,lmyear,"N_acincb2");
-  N_acinac1.allocate(fmyear,lmyear,"N_acinac1");
-  N_acinac2.allocate(fmyear,lmyear,"N_acinac2");
-  logSSB_cb.allocate(fmyear,lmyear,"logSSB_cb");
-  logSSB_ac.allocate(fmyear,lmyear,"logSSB_ac");
-  recruit_cb.allocate(fmyear,lmyear,"recruit_cb");
-  recruit_ac.allocate(fmyear,lmyear,"recruit_ac");
-  Fstockcb_sd.allocate(fmyear,lmyear,"Fstockcb_sd");
-  Fstockac_sd.allocate(fmyear,lmyear,"Fstockac_sd");
-  Fcb1_sd.allocate(fmyear,lmyear,"Fcb1_sd");
-  Fcb2_sd.allocate(fmyear,lmyear,"Fcb2_sd");
-  Fac1_sd.allocate(fmyear,lmyear,"Fac1_sd");
-  Fac2_sd.allocate(fmyear,lmyear,"Fac2_sd");
-  mdssn.allocate(fmyear,lmyear,"mdssn");
-  chesmmap1.allocate(fmyear,lmyear,"chesmmap1");
-  chesmmap2.allocate(fmyear,lmyear,"chesmmap2");
-  njbt.allocate(fmyear,lmyear,"njbt");
-  nyohs.allocate(fmyear,lmyear,"nyohs");
-  dessn.allocate(fmyear,lmyear,"dessn");
-  de30.allocate(fmyear,lmyear,"de30");
-  ctlist1.allocate(fmyear,lmyear,"ctlist1");
-  ctlist2.allocate(fmyear,lmyear,"ctlist2");
-  oceanage1.allocate(fmyear,lmyear,"oceanage1");
-  bayage1.allocate(fmyear,lmyear,"bayage1");
-  cbyoy.allocate(fmyear,lmyear-1,"cbyoy");
-  nyyoy.allocate(fmyear,lmyear-1,"nyyoy");
-  njyoy.allocate(fmyear,lmyear-1,"njyoy");
-  sig2_f.allocate(1,region,1,tstep,"sig2_f");
-  #ifndef NO_AD_INITIALIZE
-    sig2_f.initialize();
-  #endif
-  Lcatch.allocate(1,region,1,tstep,"Lcatch");
-  #ifndef NO_AD_INITIALIZE
-    Lcatch.initialize();
-  #endif
-  Lcatchagecomp.allocate(1,region,1,tstep,"Lcatchagecomp");
-  #ifndef NO_AD_INITIALIZE
-    Lcatchagecomp.initialize();
-  #endif
-  Lindex_md.allocate("Lindex_md");
-  #ifndef NO_AD_INITIALIZE
-  Lindex_md.initialize();
-  #endif
-  Lindexagecomp_md.allocate("Lindexagecomp_md");
-  #ifndef NO_AD_INITIALIZE
-  Lindexagecomp_md.initialize();
-  #endif
-  Lindex_ny.allocate("Lindex_ny");
-  #ifndef NO_AD_INITIALIZE
-  Lindex_ny.initialize();
-  #endif
-  Lindexagecomp_ny.allocate("Lindexagecomp_ny");
-  #ifndef NO_AD_INITIALIZE
-  Lindexagecomp_ny.initialize();
-  #endif
-  Lindex_nj.allocate("Lindex_nj");
-  #ifndef NO_AD_INITIALIZE
-  Lindex_nj.initialize();
-  #endif
-  Lindexagecomp_nj.allocate("Lindexagecomp_nj");
-  #ifndef NO_AD_INITIALIZE
-  Lindexagecomp_nj.initialize();
-  #endif
-  Lindex_des.allocate("Lindex_des");
-  #ifndef NO_AD_INITIALIZE
-  Lindex_des.initialize();
-  #endif
-  Lindexagecomp_des.allocate("Lindexagecomp_des");
-  #ifndef NO_AD_INITIALIZE
-  Lindexagecomp_des.initialize();
-  #endif
-  Lindex_de30.allocate("Lindex_de30");
-  #ifndef NO_AD_INITIALIZE
-  Lindex_de30.initialize();
-  #endif
-  Lindexagecomp_de30.allocate("Lindexagecomp_de30");
-  #ifndef NO_AD_INITIALIZE
-  Lindexagecomp_de30.initialize();
-  #endif
-  Lindex_ct.allocate(1,tstep,"Lindex_ct");
-  #ifndef NO_AD_INITIALIZE
-    Lindex_ct.initialize();
-  #endif
-  Lindexagecomp_ct.allocate(1,tstep,"Lindexagecomp_ct");
-  #ifndef NO_AD_INITIALIZE
-    Lindexagecomp_ct.initialize();
-  #endif
-  Lindex_cm.allocate(1,tstep,"Lindex_cm");
-  #ifndef NO_AD_INITIALIZE
-    Lindex_cm.initialize();
-  #endif
-  Lindexagecomp_cm.allocate(1,tstep,"Lindexagecomp_cm");
-  #ifndef NO_AD_INITIALIZE
-    Lindexagecomp_cm.initialize();
-  #endif
-  Lage1index.allocate(1,age1surv,"Lage1index");
-  #ifndef NO_AD_INITIALIZE
-    Lage1index.initialize();
-  #endif
-  Lage1index_ny.allocate(1,age1surv,"Lage1index_ny");
-  #ifndef NO_AD_INITIALIZE
-    Lage1index_ny.initialize();
-  #endif
-  Lage1index_md.allocate("Lage1index_md");
-  #ifndef NO_AD_INITIALIZE
-  Lage1index_md.initialize();
-  #endif
-  Lyoyindex_coast.allocate(1,yoysurv_coast,"Lyoyindex_coast");
-  #ifndef NO_AD_INITIALIZE
-    Lyoyindex_coast.initialize();
-  #endif
-  Lyoyindex_bay.allocate(1,yoysurv_bay,"Lyoyindex_bay");
-  #ifndef NO_AD_INITIALIZE
-    Lyoyindex_bay.initialize();
-  #endif
-  Lfsel.allocate(1,region,1,tstep,"Lfsel");
-  #ifndef NO_AD_INITIALIZE
-    Lfsel.initialize();
-  #endif
-  Lssel_md.allocate("Lssel_md");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_md.initialize();
-  #endif
-  Lssel_cm.allocate(1,tstep,"Lssel_cm");
-  #ifndef NO_AD_INITIALIZE
-    Lssel_cm.initialize();
-  #endif
-  Lssel_ny.allocate("Lssel_ny");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_ny.initialize();
-  #endif
-  Lssel_nj.allocate("Lssel_nj");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_nj.initialize();
-  #endif
-  Lssel_ct.allocate(1,tstep,"Lssel_ct");
-  #ifndef NO_AD_INITIALIZE
-    Lssel_ct.initialize();
-  #endif
-  Lssel_des.allocate("Lssel_des");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_des.initialize();
-  #endif
-  Lssel_de30.allocate("Lssel_de30");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_de30.initialize();
-  #endif
-  Lssel_a.allocate("Lssel_a");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_a.initialize();
-  #endif
-  Lssel_b.allocate("Lssel_b");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_b.initialize();
-  #endif
-  Lssel_c.allocate("Lssel_c");
-  #ifndef NO_AD_INITIALIZE
-  Lssel_c.initialize();
-  #endif
-  pen_N0_dev.allocate("pen_N0_dev");
-  #ifndef NO_AD_INITIALIZE
-  pen_N0_dev.initialize();
-  #endif
-  pen_f2sel.allocate("pen_f2sel");
-  #ifndef NO_AD_INITIALIZE
-  pen_f2sel.initialize();
-  #endif
-  pen_F.allocate("pen_F");
-  #ifndef NO_AD_INITIALIZE
-  pen_F.initialize();
-  #endif
-  pen_prop.allocate("pen_prop");
-  #ifndef NO_AD_INITIALIZE
-  pen_prop.initialize();
-  #endif
-  pen_prop_aco.allocate("pen_prop_aco");
-  #ifndef NO_AD_INITIALIZE
-  pen_prop_aco.initialize();
-  #endif
-  pen_prop_bay.allocate("pen_prop_bay");
-  #ifndef NO_AD_INITIALIZE
-  pen_prop_bay.initialize();
-  #endif
-  pen_cb_sel.allocate("pen_cb_sel");
-  #ifndef NO_AD_INITIALIZE
-  pen_cb_sel.initialize();
-  #endif
-  pen_rdev.allocate("pen_rdev");
-  #ifndef NO_AD_INITIALIZE
-  pen_rdev.initialize();
-  #endif
-  pen_fdev.allocate("pen_fdev");
-  #ifndef NO_AD_INITIALIZE
-  pen_fdev.initialize();
-  #endif
-  pen_feq.allocate("pen_feq");
-  #ifndef NO_AD_INITIALIZE
-  pen_feq.initialize();
-  #endif
-  pen_sf.allocate("pen_sf");
-  #ifndef NO_AD_INITIALIZE
-  pen_sf.initialize();
-  #endif
-  pen_sf_ct.allocate("pen_sf_ct");
-  #ifndef NO_AD_INITIALIZE
-  pen_sf_ct.initialize();
-  #endif
-  pen_sf_ny.allocate("pen_sf_ny");
-  #ifndef NO_AD_INITIALIZE
-  pen_sf_ny.initialize();
-  #endif
-  neg_LL.allocate("neg_LL");
-  prior_function_value.allocate("prior_function_value");
-  likelihood_function_value.allocate("likelihood_function_value");
+ END_CALCS
+
+PARAMETER_SECTION
+  //The parameter section is where we specify the parameters to be estimated (init)
+  //and any other values that will depend on the estimated parameters (i.e., variables)
+  
+  //parameters to determine numbers at age in first year
+  //init_number log_N0(-1) //log of mean abundance at age in the first year
+  init_bounded_dev_vector log_N0_devs(fage+1,lage,-10,10,-1)//deviations of abudnace at age for the first year
+
+  //*******************
+  //fishery selectivity
+  //*******************
+  
+  //SN Could not make init_4darrays
+  //SN make fs for each spatial region
+  //init_3darray log_fs_cb(1,tblock,1,tstep,fage,lage-1,2)//fishery selectivy at age for each fleet
+  //3darray atan_log_fs_cb(1,tblock,1,tstep,fage,lage-1)//the arctangent transformation for fishery selectivity of each fleet
+
+  // ** Update 5/23/23 **
+  // SN changed selectivity in the coast to be a logistic function in attempt to help with correlation issues
+  init_bounded_matrix log_sf1_ac(1,tblock,1,tstep,-2,2,2) // slope of the logistic function for fsel in the chesapeake bay
+  matrix sf1_ac(1,tblock,1,tstep) //arctanget transformation for the slope of logistic function for fishery selectivity
+  init_bounded_matrix log_sf2_ac(1,tblock,1,tstep,0,5,2) // 50% selectivity param  of the logistic function for fsel in the chesapeake bay
+  matrix sf2_ac(1,tblock,1,tstep) //arctanget transformation for the 50% selectivity param of logistic function for fishery selectivity 
+
+  //double logistic parameters for fishery in the chesapeake bay
+  init_bounded_matrix log_sf1_cb(1,tblock,1,tstep,-2,2,2)
+  matrix sf1_cb(1,tblock,1,tstep)
+  init_bounded_matrix log_sf2_cb(1,tblock,1,tstep,0,5,2)
+  matrix sf2_cb(1,tblock,1,tstep)
+  init_bounded_matrix log_sf3_cb(1,tblock,1,tstep,-2,2,2)
+  matrix sf3_cb(1,tblock,1,tstep)
+  init_bounded_matrix log_sf4_cb(1,tblock,1,tstep,0.5,5,2)
+  matrix sf4_cb(1,tblock,1,tstep)
+
+  //*******************
+  //survey selectivity
+  //*******************
+  
+  //logistic parameters for md SNN
+  init_bounded_number log_ssf1_md(-2,2,3) //log of the slope for md ssn
+  number ssf1_md //slope of the md ssn
+  init_bounded_number log_ssf2_md(0,5,3) //log of the 50% selected for md ssn
+  number ssf2_md //50% sel for md ssn
+  
+  //logistic parameters for DE SSN
+  init_bounded_number log_ssf1_des(-2,2,3) //log of the slope for DE SSN
+  number ssf1_des //slope of DE SSN
+  init_bounded_number log_ssf2_des(0,5,3) //log of the 50% sel for DE SSN
+  number ssf2_des //50% sel for DE SSN
+  
+  //double logistic parameters for chesMMAP
+  init_bounded_vector log_ssf1_cm(1,tstep,-2,2,3) //log of the slope for chesMMAP
+  vector ssf1_cm(1,tstep) //slope ofchesMMAP
+  init_bounded_vector log_ssf2_cm(1,tstep,0,5,3) //log of the 50% sel forchesMMAP
+  vector ssf2_cm(1,tstep) //50% sel for chesMMAP
+  //below are double logisitc parameters, turned off, 11/6/23
+  //init_bounded_vector log_ssf3_cm(1,tstep,-2,2,-3) //log of the slope for chesMMAP
+  //vector ssf3_cm(1,tstep) //slope of chesMMAP
+  //init_bounded_vector log_ssf4_cm(1,tstep,1,5,-3) //log of the 50% sel for chesMMAP
+  //vector ssf4_cm(1,tstep) //50% sel for chesMMAP
+
+  //double logistic parameters for NYOHS
+  init_bounded_number log_ssf1_ny(-2,2,3) //log of the slope for NYOHS
+  number ssf1_ny //slope of NYOHS
+  init_bounded_number log_ssf2_ny(0,5,3) //log of the 50% sel for NYOHS
+  number ssf2_ny //50% sel for NYOHS
+  init_bounded_number log_ssf3_ny(-2,2,3) //log of the slope for NYOHS
+  number ssf3_ny //slope of NYOHS
+  init_bounded_number log_ssf4_ny(1,5,3) //log of the 50% sel for NYOHS
+  number ssf4_ny //50% sel for NYOHS
+
+  //double logistic parameters for NJBT
+  init_bounded_number log_ssf1_nj(-2,2,3) //log of the slope for NJBT
+  number ssf1_nj //slope of  NJBT
+  init_bounded_number log_ssf2_nj(0,5,3) //log of the 50% sel for NJBT
+  number ssf2_nj //50% sel for  NJBT
+  init_bounded_number log_ssf3_nj(-2,2,3) //log of the slope for NJBT
+  number ssf3_nj //slope of  NJBT
+  init_bounded_number log_ssf4_nj(1,5,3) //log of the 50% sel for NJBT
+  number ssf4_nj //50% sel for NJBT
+
+  //double logistic parameters for DE30
+  init_bounded_number log_ssf1_de30(-2,2,3) //log of the slope for DE30
+  number ssf1_de30 //slope of  DE30
+  init_bounded_number log_ssf2_de30(0,5,3) //log of the 50% sel for DE30
+  number ssf2_de30 //50% sel for  DE30
+  init_bounded_number log_ssf3_de30(-4,2,3) //log of the slope for DE30
+  number ssf3_de30 //slope of  DE30
+  init_bounded_number log_ssf4_de30(1,5,3) //log of the 50% sel for DE30
+  number ssf4_de30 //50% sel for DE30
+
+  //double logistic parameters for CTLIST
+  init_bounded_vector log_ssf1_ct(1,tstep,-2,2,3) //log of the slope for CTLIST
+  vector ssf1_ct(1,tstep) //slope CTLIST
+  init_bounded_vector log_ssf2_ct(1,tstep,0,5,3) //log of the 50% sel for CTLIST
+  vector ssf2_ct(1,tstep) //50% sel for CTLIST
+  init_bounded_vector log_ssf3_ct(1,tstep,-2,2,3) //log of the slope for CTLIST
+  vector ssf3_ct(1,tstep) //slope of CTLIST
+  init_bounded_vector log_ssf4_ct(1,tstep,1,5,3) //log of the 50% sel for CTLIST
+  vector ssf4_ct(1,tstep) //50% sel for CTLIST
+
+  //selectivity in the first year, first tmiestep
+  init_bounded_number log_a_sf1(-2,2,2) //log slope of logisitc function for sel in the first year
+  init_bounded_number log_a_sf2(0,5,2) //log age at 50% sel of logisitc function for sel in the first year
+  number a_sf1 //slope of logistic function for sel in the first year
+  number a_sf2 //age at 50% sel for log function of sel in the first year
+
+  init_number log_q_md(1) //log of md SSN survey catchability
+  init_vector log_q_cm(1,tstep,1) //log of chesmmap surv catchability
+  init_vector log_q_ct(1,tstep,1) //log of CT LIST surv catchability
+  init_number log_q_ny(1) // log of NY OHS catchability
+  init_number log_q_nj(1) //log of njbt catchability
+  init_number log_q_des(1) // log of del SSN, catchability
+  init_number log_q_de30(1) //log of de30 catchability
+  
+  number q_md // md SSN survey catchability
+  vector q_cm //chesmmap surv catchability
+  vector q_ct //CT LIST surv catchability
+  number q_ny //NY OHS catchability
+  number q_nj //nybt catchability
+  number q_des // del SSN, catchability
+  number q_de30 //de30 catchability
+
+  //init_vector log_q_age1n(1,tstep) //log NY age 1 survey catchability
+  init_number log_q_age1n(1)            //using this until age 1 ny is disaggregated
+  init_number log_q_age1m(1)          //log MD age 1 survey catchability
+  init_vector log_q_yoy_coast(1,yoysurv_coast,1)      //log YOY catchability for coast (NY and NJ agg)
+  init_vector log_q_yoy_bay(1,yoysurv_bay,1)        //log YOY catchability for bay (MD and VA)
+  
+  //Recruitment
+  init_bounded_vector log_R(1,region,0,20,1) //mean of log recruitment
+  init_bounded_dev_vector log_Rdevs1(fmyear,lmyear,-10,10,1)// rdevs for the bay stock bounded by log(-10) and log(10)  *MW*
+  init_bounded_dev_vector log_Rdevs2(fmyear,lmyear,-10,10,1)// rdevs for the coast stock bounded by log(-10) and log(10)  *MW*
+
+  //Fishing mortality
+  init_bounded_vector log_Feq(1,stock,-5,2,2) //logF in the first year
+  init_bounded_matrix log_F(1,region,1,tstep,-5,2,2) //mean of log F
+  init_bounded_dev_vector log_Fdevs_r1t1(fmyear,lmyear,-15,15,2)//F devs for region 1;time step 1, phase 2
+  init_bounded_dev_vector log_Fdevs_r1t2(fmyear,lmyear,-15,15,2)//F devs for region 1;time step 2, phase 2
+  init_bounded_dev_vector log_Fdevs_r2t1(fmyear,lmyear,-15,15,2)///F devs for region 2;time step 1, phase 2
+  init_bounded_dev_vector log_Fdevs_r2t2(fmyear,lmyear,-15,15,2)//F devs for region 2;time step 2, phase 2
+ 
+  //set up what we are calculating for population model
+  matrix Feq(1,stock,fage,lage) //F in equillibrium in the first year
+  4darray Nt(1,stock,1,tstep,fmyear,lmyear,fage,lage) // Nt is total abundance at age
+  5darray N(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage) //N is abundance at age in each region
+  4darray N_region(1,region,1,tstep,fmyear,lmyear,fage,lage)
+  3darray Nbay(1,tstep,fmyear,lmyear,fage,lage)//Nbay is the abundance at age in the bay for each time step
+  3darray Ncoast(1,tstep,fmyear,lmyear,fage,lage)//Ncost is the abundance at age in the coast for each time step
+  4darray Z(1,region,1,tstep,fmyear,lmyear,fage,lage) ///total mortality rate at age
+  4darray F(1,region,1,tstep,fmyear,lmyear,fage,lage) //fishing mortality rate at age
+  3darray Fbar(1,stock,fmyear,lmyear,fage,lage) //fishing mortality at age for each stock in each region
+  matrix Fplus(1,stock,fmyear,lmyear) //fishing mortaltiy for fish 7-15+, for each stock
+  4darray Freg_7plus(1,region,1,tstep,fmyear,lmyear,7,lage)//weigthed average fishing mortality for fish 7 and older
+
+  4darray fsel(1,region,1,tstep,fmyear,lmyear,fage,lage) //fishery selectivity at age
+  4darray log_fsel(1,region,1,tstep,fmyear,lmyear,fage,lage) //log of fsel
+  vector afsel(fage,lage) //average fsel across both regions in the first year at equillibrium
+  vector log_afsel(fage,lage) //log of afsel
+
+  vector ssel_md(sfage_b,slage_b) //surv sel for mdssn
+  matrix ssel_cm(1,tstep,sfage_a,slage_a) // surv sel for chesmmap
+  matrix ssel_ct(1,tstep,sfage_a,slage_a) //surv sel for ctlist
+  vector ssel_ny(sfage_c,slage_c) //surv sel for ny ohs
+  vector ssel_nj(sfage_b,slage_b) //surv sel for nj nt
+  vector ssel_des(sfage_c,slage_c) //surv sel for de ssn
+  vector ssel_de30(sfage_a,slage_a) //surv sel for de 30
+
+  //init_vector q_age1n(1,tstep)     //NY age 1 survey catchability
+  number q_age1n                //NY age 1, using this until age 1 IOA IS disaggregated
+  number q_age1m              //MD age 1 survey catchability
+  vector q_yoy_coast(1,yoysurv_coast) // coast yoy catchability
+  vector q_yoy_bay(1,yoysurv_bay)    //bay yoy catchability
+
+  vector q_age1(1,age1surv)//age 1 survey catchability
+  //vector q_yoy(1,yoysurv) //yoy survey catchability
+
+
+  //observation model
+  4darray est_C(1,stock,1,region,1,tstep,fmyear,lmyear) //estimated total catch by stock for each year, timestep, region,
+  3darray est_region_C(1,region,1,tstep,fmyear,lmyear) //estimated total catch for each region, no stock 
+  5darray est_C_age(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated catch at age
+  5darray est_C_age_err(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated catch at age with aggin error matrix included
+  4darray est_totC_age(1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated catch at age for each region
+  4darray est_totC_age_err(1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated catch at age for each region with age error
+  5darray est_Cp(1,stock,1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated proportions at age in the catch by stock
+  4darray est_region_Cp(1,region,1,tstep,fmyear,lmyear,fage,lage) //estimated proportions at age by region
+  4darray sigma2_Cp(1,region,1,tstep,fmyear,lmyear,fage,lage) //variance of estimate proportions at age in the catch
+  matrix ESS_C(1,region,fmyear,lmyear) //log-scale Standard Deviation for total catch
+
+  //*****************************
+  //chesapeake bay
+  //*****************************
+  
+  //MD SSN
+  matrix est_I_age_md(fmyear,lmyear,sfage_b,slage_b) //estimated catch at age, MD Spawning Stock survey
+  matrix est_I_age_md_err(fmyear,lmyear,sfage_b,slage_b) //estimated catch at age with aging error
+  matrix est_Ip_md(fmyear,lmyear,sfage_b,slage_b)//estimated proportions at age, MD spawning stock survey
+  vector est_I_md(fmyear,lmyear)//estimated aggregate index of abundance for MD spawning stock survey
+  matrix sigma2_Ip_md(fmyear,lmyear,sfage_b,slage_b)//variance of est prop at age 
+
+  //chesMMAP
+  3darray est_I_age_cm(1,tstep,fmyear,lmyear,sfage_a,slage_a)//estimated catch at age, chesmmap
+  3darray est_Ip_cm(1,tstep,fmyear,lmyear,sfage_a,slage_a)//estimate proportions at age, chesmmap
+  matrix est_I_cm(1,tstep,fmyear,lmyear)//estimated aggregate index of abundance for chesmmap survey
+  3darray sigma2_Ip_cm(1,tstep,fmyear,lmyear,sfage_a,slage_a)//variance of est prop at age 
+
+
+  //*****************************
+  //atlantic coast
+  //*****************************
+
+  //CT LIST
+  3darray est_I_age_ct(1,tstep,fmyear,lmyear,sfage_a,slage_a) //estimated catch at age, CT LIST
+  3darray est_I_age_ct_err(1,tstep,fmyear,lmyear,sfage_a,slage_a) //estimated catch at age,with aging error
+  3darray est_Ip_ct(1,tstep,fmyear,lmyear,sfage_a,slage_a)//estimated proportions at age,CT LIST
+  matrix est_I_ct(1,tstep,fmyear,lmyear)//estimated aggregate index of abundance for CT LIST
+  3darray sigma2_Ip_ct(1,tstep,fmyear,lmyear,sfage_a,slage_a)//variance of est prop at age CT LIST
+
+  //NY OHS
+  matrix est_I_age_ny(fmyear,lmyear,sfage_c,slage_c) //estimated catch at age, NY OHS
+  matrix est_I_age_ny_err(fmyear,lmyear,sfage_c,slage_c) //estimated catch at age, with aging error
+  matrix est_Ip_ny(fmyear,lmyear,sfage_c,slage_c)//estimated proportions at age,NY OHS
+  vector est_I_ny(fmyear,lmyear)//estimated aggregate index of abundance for NYOHS
+  matrix sigma2_Ip_ny(fmyear,lmyear,sfage_c,slage_c)//variance of est prop at age NY OHS
+
+  //NJ Bottom Trawl
+  matrix est_I_age_nj(fmyear,lmyear,sfage_b,slage_b) //estimated catch at age, NJ BT
+  matrix est_I_age_nj_err(fmyear,lmyear,sfage_b,slage_b) //estimated catch at age wwith aging error
+  matrix est_Ip_nj(fmyear,lmyear,sfage_b,slage_b)//estimated proportions at age, NJ Bottom Trawl
+  vector est_I_nj(fmyear,lmyear)//estimated aggregate index of abundance for NJ BT
+  matrix sigma2_Ip_nj(fmyear,lmyear,sfage_b,slage_b)//variance of est prop at age NJ BT
+
+  //DE Spawning Stock Survey
+  matrix est_I_age_des(fmyear,lmyear,sfage_c,slage_c) //estimated catch at age, DE SSN
+  matrix est_I_age_des_err(fmyear,lmyear,sfage_c,slage_c) //estimated catch at age with aging error
+  matrix est_Ip_des(fmyear,lmyear,sfage_c,slage_c)//estimated proportions at age, DE SSN
+  vector est_I_des(fmyear,lmyear)//estimated aggregate index of abundance for DE SSN
+  matrix sigma2_Ip_des(fmyear,lmyear,sfage_c,slage_c)//variance of est prop at age DE SSN
+  
+  //DE 30
+  matrix est_I_age_de30(fmyear,lmyear,sfage_a,slage_a) //estimated catch at age, DE 30 ( no aging error needed)
+  matrix est_Ip_de30(fmyear,lmyear,sfage_a,slage_a)//estimated proportions at age, DE 30
+  vector est_I_de30(fmyear,lmyear)//estimated aggregate index of abundance for DE 30
+  matrix sigma2_Ip_de30(fmyear,lmyear,sfage_a,slage_a)//variance of est prop at age DE 30
+
+  //Age 1 and YOY surveys
+  matrix est_I_age1n(1,age1surv,fmyear,lmyear) // NY age 1 estimated index of abundace
+         //currently est_I_Age1n is not split by timestep 11/21/22
+  vector est_I_age1m(fmyear,lmyear) // MD age 1 estimated index of abundance
+  matrix est_I_yoy_coast(1,yoysurv_coast,fmyear,lmyear)   // estimated index of abundance for coast YOY
+  matrix est_I_yoy_bay(1,yoysurv_bay,fmyear,lmyear)     //estimated index of abundance for bay YOY
+
+  matrix est_I_age1(1,age1surv,fmyear,lmyear) //estimated ioa for age 1 survey
+  //matrix est_I_yoy(1,yoysurv,fmyear,lmyear) //estimated ioa for yoy surv
+  
+  matrix rw(fmyear,lmyear,fage,lage) //estimate rivard weight
+  matrix SSB_w(fmyear,lmyear,fage,lage) //estimated SSBweight at age, adjusted from rivard weight
+
+  3darray B(1,stock,1,region,fmyear,lmyear) //estimated biomass for each year
+  3darray SSB(1,stock,1,region,fmyear,lmyear)  //estimated spawning stock biomass for each year
+  vector J_w(fmyear,lmyear) //estimated january 1 biomass at age
+
+  init_bounded_matrix log_prop_bay(1,tstep,fage+1,lage,-10,0,5) //log occupancy probabilities at age for the chesapeak bay stock in the bay in each timstep
+  init_bounded_matrix log_prop_coast(1,tstep,fage+1,lage,-10,0,5) //log occupancy probabilities at age for the  atlantic coast stock in the chesapeake bay
+  //init_3darray log_prop(1,stock,1,tstep,fage,lage) // estimated occupancy probabilities for the chesapeake bay
+  4darray prop(1,stock,1,tstep,1,region,fage,lage) //occupancy probabilities to estimate N
+
+  //init_bounded_matrix prop_acoustic(1,tstep,fage+1,lage,0,1,-5) //acoustic occupancy probabilities at age for chesapeake bay fish
+
+  //create sdreport to get uncertainty in abundance in parameters
+  //  can only do sdreport, number, vector and matrix
+  sdreport_vector Ntot_cb(fmyear,lmyear)//tot cb stock
+  sdreport_vector Ntot_ac(fmyear,lmyear)//tot ac stock
+  
+  sdreport_vector N_cbincb1(fmyear,lmyear) //cb stock in cb region, timestep=1
+  sdreport_vector N_cbincb2(fmyear,lmyear) //cb stock in cb region, timestep=2
+  sdreport_vector N_cbinac1(fmyear,lmyear) //cb stock in ocean region, timestep=1
+  sdreport_vector N_cbinac2(fmyear,lmyear) //cb stock in ocean region, timestep=2
+  sdreport_vector N_acincb1(fmyear,lmyear) //ac stock in cb region, timestep =1
+  sdreport_vector N_acincb2(fmyear,lmyear) //ac stock in cb region, timestep =2
+  sdreport_vector N_acinac1(fmyear,lmyear) //ac stock in ac region, timestep =1
+  sdreport_vector N_acinac2(fmyear,lmyear) //ac stock in ac region, timestep =2
+  
+  sdreport_vector logSSB_cb(fmyear,lmyear) //cb stock in both regions
+  sdreport_vector logSSB_ac(fmyear,lmyear) //ac stock in both region
+
+  //sdreport_vector logSSB_cbincb(fmyear,lmyear) //cb stock in cb regions
+  //sdreport_vector logSSB_cbinac(fmyear,lmyear) //cb stock in cb region
+  //sdreport_vector logSSB_acinac(fmyear,lmyear) //ac stock in ac regions
+  //sdreport_vector logSSB_acincb(fmyear,lmyear) //ac stock in cb region
+
+  sdreport_vector recruit_cb(fmyear,lmyear) //cb recruitment in cb
+  sdreport_vector recruit_ac(fmyear,lmyear) //ac recruitment in ac
+
+  sdreport_vector Fstockcb_sd(fmyear,lmyear) //f mort for cb stock
+  sdreport_vector Fstockac_sd(fmyear,lmyear) //f mort for ac stock
+
+  sdreport_vector Fcb1_sd(fmyear,lmyear) //f mort for cb region, jan-jun
+  sdreport_vector Fcb2_sd(fmyear,lmyear) //f mort for cb region, jul-dec
+  sdreport_vector Fac1_sd(fmyear,lmyear) //f mort for ac region, jan-jun
+  sdreport_vector Fac2_sd(fmyear,lmyear) //f mort for ac region, jul-dec
+
+  sdreport_vector Catcb1_sd(fmyear,lmyear) //f mort for cb region, jan-jun
+  sdreport_vector Catcb2_sd(fmyear,lmyear) //f mort for cb region, jul-dec
+  sdreport_vector Catac1_sd(fmyear,lmyear) //f mort for ac region, jan-jun
+  sdreport_vector Catac2_sd(fmyear,lmyear) //f mort for ac region, jul-dec
+
+
+  sdreport_vector mdssn(fmyear,lmyear) //mdssn
+  sdreport_vector chesmmap1(fmyear,lmyear) //chesmmapts1
+  sdreport_vector chesmmap2(fmyear,lmyear) //chesmmap ts2
+  sdreport_vector njbt(fmyear,lmyear) //nj bt
+  sdreport_vector nyohs(fmyear,lmyear) //ny ohs
+  sdreport_vector dessn(fmyear,lmyear) //dessn
+  sdreport_vector de30(fmyear,lmyear) //de30
+  sdreport_vector ctlist1(fmyear,lmyear) //ctlist sd ts 1
+  sdreport_vector ctlist2(fmyear,lmyear) //ctlist sd ts2
+
+  sdreport_vector oceanage1(fmyear,lmyear) //nyage1 surv
+  sdreport_vector bayage1(fmyear,lmyear) //md age 1 survey
+  sdreport_vector cbyoy(fmyear,lmyear-1) //cbagg yoy surv
+  sdreport_vector nyyoy(fmyear,lmyear-1) // ny yoy survy
+  sdreport_vector njyoy(fmyear,lmyear-1) //njyoy surv
+
+
+  //***********************
+  //Likelihood components
+  //***********************
+
+  matrix sig2_f(1,region,1,tstep) //variance for each region and timestep
+  
+  //likelihoods functions
+  matrix Lcatch(1,region,1,tstep)
+  matrix Lcatchagecomp(1,region,1,tstep)
+  number Lindex_md
+  number Lindexagecomp_md
+  number Lindex_ny
+  number Lindexagecomp_ny
+  number Lindex_nj
+  number Lindexagecomp_nj
+  number Lindex_des
+  number Lindexagecomp_des
+  number Lindex_de30
+  number Lindexagecomp_de30
+  vector Lindex_ct(1,tstep)
+  vector Lindexagecomp_ct(1,tstep)
+  vector Lindex_cm(1,tstep)
+  vector Lindexagecomp_cm(1,tstep)
+  vector Lage1index(1,age1surv)
+  vector Lage1index_ny(1,age1surv)
+  //number Lage1index_ny
+  number Lage1index_md
+  
+  //vector Lyoyindex(1,yoysurv)
+  vector Lyoyindex_coast(1,yoysurv_coast)
+  vector Lyoyindex_bay(1,yoysurv_bay)
+
+  matrix Lfsel(1,region,1,tstep)
+  number Lssel_md //surv selectivity for mdssn
+  vector Lssel_cm(1,tstep) //surv selectivity for chesmmap
+  number Lssel_ny //surv selectivity of NY OHS
+  number Lssel_nj //surv selectivty of NJBT
+  vector Lssel_ct(1,tstep) //surv selectivity for ct list
+  number Lssel_des //surv selectivity for de ssn
+  number Lssel_de30 //surv selectivity for de30'
+  
+  number Lssel_a //survey selectivity for group a
+  number Lssel_b //survey selectivity for group b
+  number Lssel_c //survey selectivity for group c
+  number pen_N0_dev //penalty for deviations of N0
+  number pen_f2sel // penalty for fsel in coast of  tblock1 deviating from tblock2
+  number pen_F //penalty for F
+  number pen_prop // penalty for occupancy probability deviating away from prior (conventional data)
+  number pen_prop_aco //penalty for acoustic prior deviating away from prior
+  number pen_prop_bay //penalty for proportion of bay fish in coast
+  number pen_cb_sel //cb penalty for fsel
+  number pen_rdev //penalty for recruitment deviations
+  number pen_fdev //penalty for F deviations
+  number pen_feq //penalty for CB Feq
+  number pen_sf //penalty for the age at 50% sel for the cb fishery selectivity
+  number pen_sf_ct //penalty for the age at 40% sel estimates of ctlist
+
+  objective_function_value neg_LL  //value we are going to minimize
+
+ LOCAL_CALCS
   //set starting values for parameters
   //log_N0=log(200000.);//mean abudance
   log_R=log(1000000.); //mean of log recruitment
   log_F(1)=log(0.3); //mean of log F
   log_F(2)=log(0.3); //mean of log F
   log_Feq=log(0.3); //F in the first year
+
   //*******************
   //starting parameters for selectivity
   //*******************
+
   //fishing selectivity
   log_afsel=0.;  //average fsel
   //atlantic coast
@@ -1047,6 +759,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   //log_fs_cb(2)=0.; //fsel for ches bay time step 2
   //log_fs_ac(1)=0.; //fsel for atl coast time step 1
   //log_fs_ac(2)=0.; //fsel for atl coast time step 2
+
   //survey selectivity
   //mdssn
   log_ssf1_md=0.;
@@ -1090,6 +803,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   
   log_a_sf1=log(1.);
   log_a_sf2=log(4.);
+
   log_q_md=log(0.000005); //log of md SSN survey catchability
   log_q_cm=log(0.000005); //log of chesmmap surv catchability
   log_q_ct=log(0.000005); //log of CT LIST surv catchability
@@ -1097,10 +811,12 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   log_q_nj=log(0.000005); //log of nybt catchability
   log_q_des=log(0.000005); // log of del SSN, catchability
   log_q_de30=log(0.000005); //log of de30 catchability
+
   log_q_age1n=log(0.000005);       //using this until age 1 ny is disaggregated
   log_q_age1m=log(0.000005);       //log MD age 1 survey catchability
   log_q_yoy_coast=log(0.000005);   //log YOY catchability for coast (NY and NJ agg)
   log_q_yoy_bay=log(0.000005);    //log YOY catchability for bay (MD and VA)
+
   //defining log_prop_bay and coast so that you are not taking the log of a 0, instead value equal -10
   for(ts=1;ts<=tstep;ts++)
   {
@@ -1116,6 +832,8 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
       log_prop_coast(ts,a)=prop_coast(ts,a);
     }//close age loop
   }//close tstep loop
+
+
   for(y=fmyear;y<=lmyear;y++)
   {
     r=1;
@@ -1130,44 +848,64 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
      r=2;
      ESS_C(r,y)=ESS_C_ac;
    }
+  //cout << ESS_C << endl;
+  //exit(1);
   //cout << "prop bay in coast" << endl << exp(log_prop_bay) << endl;
   //cout << "prop coast in coast" << endl << exp(log_prop_coast) << endl;
   //cout << age_err_a << endl;
   //exit(1);
   //cout << "finish ss and q calc " << endl;
   
-}
+ END_CALCS
 
-void model_parameters::userfunction(void)
-{
-  neg_LL =0.0;
+PROCEDURE_SECTION
+//In the procedure section we specify the model and the likelihood.
+
   calculate_mortality();
-  //cout << "After calculate_mortality" <<endl;
-  calculate_N_at_age();
-  //cout << "After calculate_N_at_age" <<endl;
-  calculate_F_stock();
-  //cout << "After calculate_F_stock" <<endl;
-  calculate_fishery_catch();
-  //cout << "After calculate_fisher_catch" <<endl;
-  calculate_survey_catch();
-  //cout << "After calculate_survey_catch" <<endl;
-  evaluate_likelihood();  
-  //cout << "After calculate_likelihood" <<endl;
-  calculate_B_SSB();
-  //cout << "After B_SSB" << endl;
-}
 
-void model_parameters::calculate_mortality(void)
-{
+  //cout << "After calculate_mortality" <<endl;
+
+  calculate_N_at_age();
+
+  //cout << "After calculate_N_at_age" <<endl;
+
+  calculate_F_stock();
+
+  //cout << "After calculate_F_stock" <<endl;
+   
+  calculate_fishery_catch();
+
+  //cout << "After calculate_fisher_catch" <<endl;
+
+  calculate_survey_catch();
+
+  //cout << "After calculate_survey_catch" <<endl;
+  
+  evaluate_likelihood();  
+
+  //cout << "After calculate_likelihood" <<endl;
+
+  calculate_B_SSB();
+
+  //cout << "After B_SSB" << endl;
+
+
+
+FUNCTION calculate_mortality
+
   //*******************************
   // Calculate Fishery Selectivity
   //******************************
+
+
   sf1_ac=mfexp(log_sf1_ac);
   sf2_ac=mfexp(log_sf2_ac);
+  
   sf1_cb=mfexp(log_sf1_cb);
   sf2_cb=mfexp(log_sf2_cb);
   sf3_cb=mfexp(log_sf3_cb);
   sf4_cb=mfexp(log_sf4_cb);
+  
   for(t=1;t<=tblock;t++)
   {
     ftbyr=ftyear(t);
@@ -1192,9 +930,11 @@ void model_parameters::calculate_mortality(void)
         atan_log_fs_cb(t,ts,a)=atan(log_fs_cb(t,ts,a));//arc tangent transformation of fsel, this transforms values to -pi/2 to pi/2
         atan_log_fs_cb(t,ts,a)=atan_log_fs_cb(t,ts,a)/(PI/2);//dividing arctan transformation to make between -1 and 1
         atan_log_fs_cb(t,ts,a)=atan_log_fs_cb(t,ts,a)*((ubound-lbound)/2)+(lbound/2);//this widens the range to be 12 and shifts negative to be between -10 and 2
+        
         atan_log_fs_ac(t,ts,a)=atan(log_fs_ac(t,ts,a));//arc tangent transformation of fsel, this transforms values to -pi/2 to pi/2
         atan_log_fs_ac(t,ts,a)=atan_log_fs_ac(t,ts,a)/(PI/2);//dividing arctan transformation to make between -1 and 1
         atan_log_fs_ac(t,ts,a)=atan_log_fs_ac(t,ts,a)*((ubound-lbound)/2)+(lbound/2);//this widens the range to be 12 and shifts negative to be between -10 and 2
+        
      }//close age loop
     }//close timeblock loop
   }//close fleet loop
@@ -1263,7 +1003,7 @@ void model_parameters::calculate_mortality(void)
         {
           fsel(r,ts,y,a)=1./(1.+mfexp(-sf1_ac(t,ts)*(double(a)-sf2_ac(t,ts))));
         }//close age loop
-        fsel(r,ts,y)/=max(fsel(r,ts,y));
+        //fsel(r,ts,y)/=max(fsel(r,ts,y));
       }//close tstep
    } //close year loop for fsel
   }//close time block
@@ -1271,6 +1011,7 @@ void model_parameters::calculate_mortality(void)
   //
   //exit(1);
   //cout << "fsel" << endl;
+  
   for(y=fmyear;y<=lmyear;y++)
   {
     for(r=1;r<=region;r++)
@@ -1283,47 +1024,63 @@ void model_parameters::calculate_mortality(void)
   }//close year loop
   //cout << log_fsel << endl;
   //exit(1);
+
+  
   //cout << "fsel" << fsel << endl;
   //exit(1);
   //cout << "end fsel" << endl;
+
+
+
   //*******************************
   // Calculate Survey Selectivity
   //******************************
+
   //SN added logistic or double logistic 5/25/23 to restrict model
   //group a - ages 1 - 15
+
   //set starting parameters
   ssf1_des=mfexp(log_ssf1_des);
   ssf2_des=mfexp(log_ssf2_des);
+  
   ssf1_md=mfexp(log_ssf1_md);
   ssf2_md=mfexp(log_ssf2_md);
+  
   ssf1_cm=mfexp(log_ssf1_cm);
   ssf2_cm=mfexp(log_ssf2_cm);
   //ssf3_cm=mfexp(log_ssf3_cm);
   //ssf4_cm=mfexp(log_ssf4_cm);
+
   ssf1_ct=mfexp(log_ssf1_ct);
   ssf2_ct=mfexp(log_ssf2_ct);
   ssf3_ct=mfexp(log_ssf3_ct);
   ssf4_ct=mfexp(log_ssf4_ct);
+
   ssf1_ny=mfexp(log_ssf1_ny);
   ssf2_ny=mfexp(log_ssf2_ny);
   ssf3_ny=mfexp(log_ssf3_ny);
   ssf4_ny=mfexp(log_ssf4_ny);
+
   ssf1_nj=mfexp(log_ssf1_nj);
   ssf2_nj=mfexp(log_ssf2_nj);
   ssf3_nj=mfexp(log_ssf3_nj);
   ssf4_nj=mfexp(log_ssf4_nj);
+  
   ssf1_de30=mfexp(log_ssf1_de30);
   ssf2_de30=mfexp(log_ssf2_de30);
   ssf3_de30=mfexp(log_ssf3_de30);
   ssf4_de30=mfexp(log_ssf4_de30);
+
   //cout << "end starting params" << endl;
+
   //calculating ssel
+  
   for(a=sfage_a;a<=slage_a;a++)
   {
     //de30 , double logisitic
     ssel_de30(a)=(1./(1.+mfexp(-ssf1_de30*(double(a)-ssf2_de30))))*
                   (1./(1.+mfexp(-ssf3_de30*(ssf4_de30-double(a)))));
-  //cout << ssel_de30 << endl << "end ssel de30" << endl;
+   //cout << ssel_de30 << endl << "end ssel de30" << endl;
   //cout << ssel_cm << endl;
       for(t=1;t<=tstep;t++)
       {
@@ -1337,13 +1094,17 @@ void model_parameters::calculate_mortality(void)
       }//close tstep
   }//close age loop
   //cout << ssel_ct << endl;
+
+  //anchor survey selectivity to a max of 1
   ssel_de30/=max(ssel_de30);
   for(t=1;t<=tstep;t++)
   {
     ssel_ct(t)/=max(ssel_ct(t));
-    ssel_cm(t)/=max(ssel_cm(t));
+    //ssel_cm(t)/=max(ssel_cm(t));
   }
+
   //cout << "end ssel group a" << endl;
+  
   //group b ages 2-15
   for(a=sfage_b;a<=slage_b;a++)
   {
@@ -1353,9 +1114,10 @@ void model_parameters::calculate_mortality(void)
     ssel_nj(a)=(1./(1.+mfexp(-ssf1_nj*(double(a)-ssf2_nj))))*
                   (1./(1.+mfexp(-ssf3_nj*(ssf4_nj- double(a)))));
   }//close age loop
-  ssel_md/=max(ssel_md);
+  //ssel_md/=max(ssel_md);
   ssel_nj/=max(ssel_nj);
   //cout << "end ssel group b" << endl;
+
   //group c, age 2-13
   for(a=sfage_c;a<=slage_c;a++)
   {
@@ -1364,9 +1126,11 @@ void model_parameters::calculate_mortality(void)
                   (1./(1.+mfexp(-ssf3_ny*(ssf4_ny- double(a)))));
     //dessn, logisitic
     ssel_des(a)=1./(1.+mfexp(-ssf1_des*(double(a)-ssf2_des)));
+    
+    
   }//close age loop
   ssel_ny/=max(ssel_ny);
-  ssel_des/=max(ssel_des);
+  //ssel_des/=max(ssel_des);
   //cout << "end ssel group c" << endl;
   //exit(1);
   /*
@@ -1399,6 +1163,9 @@ void model_parameters::calculate_mortality(void)
       }//close tstep loop
    }//close age loop
   //cout << "end cm and dt ssel" << endl;
+
+
+
   for(a=sfage_b;a<=6;a++)
   {
     ssel_md(a)=exp(log_ss_md(a));
@@ -1414,6 +1181,7 @@ void model_parameters::calculate_mortality(void)
   //  }//close survey loop
   //cout << ssel_md << endl;
   //exit(1);
+
   //Group C ssel
   //for(s=1;s<=nsurv_c;s++)//looping over surveys and age
   //{
@@ -1430,8 +1198,11 @@ void model_parameters::calculate_mortality(void)
     ssel_des(a)=exp(log_ss_des(a-1));
   }//close age loop
   // }//close survey loop
+
   */
+
   //cout << "end ssel" << endl;
+  
   //Catchability
   q_md=mfexp(log_q_md); //log of md SSN survey catchability
   q_cm=mfexp(log_q_cm); //log of chesmmap surv catchability
@@ -1440,6 +1211,7 @@ void model_parameters::calculate_mortality(void)
   q_nj=mfexp(log_q_nj); //log of nybt catchability
   q_des=mfexp(log_q_des); // log of del SSN, catchability
   q_de30=mfexp(log_q_de30); //log of de30 catchability
+  
   q_age1n=mfexp(log_q_age1n);
   q_age1m=mfexp(log_q_age1m);
   for(z=1;z<=yoysurv_coast;z++)
@@ -1450,15 +1222,18 @@ void model_parameters::calculate_mortality(void)
   {
     q_yoy_bay(z)=mfexp(log_q_yoy_bay(z));  
   }
+
   /*
   cout << q_a << endl;
   cout << q_b << endl;
   cout << q_c << endl;
   exit(1);
   */
+
   //calculate the fishing mortality rate (F) for each year and age
   a_sf1=mfexp(log_a_sf1);
   a_sf2=mfexp(log_a_sf2);
+  
   for(a=fage;a<=lage;a++)
   {
     //a_sf1 = slope; a_sf2=age at 50% selc
@@ -1470,6 +1245,7 @@ void model_parameters::calculate_mortality(void)
   //cout << "a-sf1= " << a_sf1 << endl << "a_sf2= " << a_sf2 << endl;
   //cout << "afsel= " << afsel << endl;
   //exit(1);
+  
   //fishing eq in the first year
   for(s=1;s<=stock;s++)
   {
@@ -1477,6 +1253,8 @@ void model_parameters::calculate_mortality(void)
   }//close stock loop
   //cout << Feq << endl;
   //exit(1);
+
+
   //calculate F in the first year, second time step for region 1
   r=1;
   t=2;
@@ -1493,6 +1271,7 @@ void model_parameters::calculate_mortality(void)
         F(r,t,y,a)=fsel(r,t,y,a)*mfexp(log_F(r,t)+log_Fdevs_r1t1(y));
     }//close age loop
   }//close year loop
+  
   //cout << F <<  endl;
   //exit(1);
   //fill out rest of years for  
@@ -1504,6 +1283,7 @@ void model_parameters::calculate_mortality(void)
       F(r,t,y,a)=fsel(r,t,y,a)*mfexp(log_F(r,t)+log_Fdevs_r1t2(y));
     }//close age loop
   }//close year loop
+
   //fill out first year  of F for region 2, timestep 2
   r=2;
   t=2;
@@ -1511,6 +1291,7 @@ void model_parameters::calculate_mortality(void)
   {
      //F(r,t,fmyear,a)=fsel(r,t,fmyear,a)*exp(log_F(r,t)+log_Fdevs_r2t2(fmyear));
     }//close age
+    
   //Fill out F for the rest of years fore region 2, time step 1
   t=1;
   for(y=fmyear;y<=lmyear;y++)
@@ -1520,6 +1301,7 @@ void model_parameters::calculate_mortality(void)
       F(r,t,y,a)=fsel(r,t,y,a)*mfexp(log_F(r,t)+log_Fdevs_r2t1(y));
     }//close age loop
   }//close year loop
+  
   //Fill out F for the rest of years fore region 2, time step 2
   t=2;
   for(y=fmyear;y<=lmyear;y++)
@@ -1540,6 +1322,9 @@ void model_parameters::calculate_mortality(void)
       }
    }
   */
+
+
+   
   //calculate the total mortality rate for each year and age 
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -1555,10 +1340,9 @@ void model_parameters::calculate_mortality(void)
   //cout << "Z" << endl << Z << endl << endl;
   //cout << "end mort" << endl;
   //exit(1);
-}
 
-void model_parameters::calculate_N_at_age(void)
-{
+FUNCTION calculate_N_at_age
+
   //filling in the prop matrix
   /*
   for(ts=1;ts<=tstep;ts++)
@@ -1588,6 +1372,7 @@ void model_parameters::calculate_N_at_age(void)
   }
   //cout << "prop" << endl << prop << endl;
   //exit(1);
+  
   for(s=1;s<=stock;s++)
   {
     for(ts=1;ts<=tstep;ts++)
@@ -1613,11 +1398,14 @@ void model_parameters::calculate_N_at_age(void)
   }//close stock loop
   //cout << "prop" << endl << prop << endl;
   //exit(1);
+
+  
   //fill in abundance at age in the first row of the N-at-age matrix
   //fill in recuitment for the first year
   Nt(1,1,fmyear,fage)=mfexp(log_R(1)+log_Rdevs1(fmyear));//Bay stock (stock, tstep, year,,age); mfexp allows exp of moderate numbers to be differentiable
   Nt(2,1,fmyear,fage)=mfexp(log_R(2)+log_Rdevs2(fmyear));//Atlantic stock(stock, tstep, year,,age)  //*MW* using the same Rdevs each year.
   //cout << "recruit" << endl;
+
   //calculate N at age in the first year and first time step, assuming that population is at equillibrium
   for(s=1;s<=stock;s++)
   {
@@ -1631,6 +1419,7 @@ void model_parameters::calculate_N_at_age(void)
     Nt(s,1,fmyear,lage)/=1.-mfexp(-(2.*M(lage)+Feq(s,lage)));//+F(2,fmyear,lage)*fsel(2,fmyear,lage)));
     //now include N0 deviations in first year of equilibrium
     Nt(s,1,fmyear)(fage+1,lage)=elem_prod(Nt(s,1,fmyear)(fage+1,lage),mfexp(log_N0_devs(fage+1,lage)));
+
     //*MW* modified
     for(r=1;r<=region;r++)
     {
@@ -1664,6 +1453,7 @@ void model_parameters::calculate_N_at_age(void)
       //Nt(s,2,fmyear,a)=(N(s,1,1,fmyear,a)*mfexp(-(M(a)+F(1,1,fmyear,a)*fsel(1,1,fmyear,a)))+N(s,2,1,fmyear,a)*mfexp(-(M(a)+F(2,1,fmyear,a)*fsel(2,1,fmyear,a))));
       Nt(s,2,fmyear,a)=(N(s,1,1,fmyear,a)*mfexp(-(M(a)+F(1,1,fmyear,a)))+N(s,2,1,fmyear,a)*mfexp(-(M(a)+F(2,1,fmyear,a))));//SN edited 2/19/24 because were applying fsel twice
     }//close age loop
+   
     for(r=1;r<=region;r++)
     {
       N(s,r,2,fmyear)=migrate(Nt(s,2,fmyear),prop(s,2,r)); //
@@ -1685,6 +1475,7 @@ void model_parameters::calculate_N_at_age(void)
   exit(1);
   */
   //cout << "end N time step 2 fmyear" << endl;
+  
   //fill in the rest of the rows of the N-at-age matrix by applying exponential mortality
   //*MW* need to keep track of which time variable is incrementing for the different seasons
   //*MW* if t=1, then the next time step is the same year, but t=2
@@ -1710,6 +1501,7 @@ void model_parameters::calculate_N_at_age(void)
   }
   exit(1);
   */
+
   for(y=fmyear+1;y<=lmyear;y++)
   {
      for(t=1;t<=tstep;t++)
@@ -1756,6 +1548,7 @@ void model_parameters::calculate_N_at_age(void)
        }//close else statement
      }//close t loop
   }//close year loop
+  
  // for(s=1;s<=stock;s++)
  // {
  //   for(t=1;t<=2;t++)
@@ -1782,6 +1575,7 @@ void model_parameters::calculate_N_at_age(void)
   */
   //cout << "N calcs" << endl;
   //exit(1);
+
   //calculate the population in each region at each time step first
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -1806,6 +1600,7 @@ void model_parameters::calculate_N_at_age(void)
   //exit(1);
   }
   */
+
   ///Fill in sd report values
   //tot pop
   for(y=fmyear;y<=lmyear;y++)
@@ -1831,10 +1626,9 @@ void model_parameters::calculate_N_at_age(void)
     recruit_cb(y)=log(N(1,1,1,y,1));
     recruit_ac(y)=log(N(2,2,1,y,1));
   }
-}
-
-void model_parameters::calculate_B_SSB(void)
-{
+  
+FUNCTION calculate_B_SSB
+  
   for(y=fmyear;y<=lmyear;y++)
   {
     for(s=1;s<=stock;s++)
@@ -1846,8 +1640,10 @@ void model_parameters::calculate_B_SSB(void)
       }//close region loop
     }//close stock loop
   }//close year loop
+
   //cout << "finish ssb calcs" << endl;
     // * is the dot product, which multiplies the values and then sums it
+
   //fill sd report params
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -1863,10 +1659,8 @@ void model_parameters::calculate_B_SSB(void)
     logSSB_acinac(y)=log(SSB(2,2,y)); //ac stock in ac region
   }//close year loop
   */
-}
 
-void model_parameters::calculate_fishery_catch(void)
-{
+FUNCTION calculate_fishery_catch
   //calculate fishery catch at age using the Baranov catch equation C=(F/Z)*(1-exp(-Z))*N
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -1929,7 +1723,9 @@ void model_parameters::calculate_fishery_catch(void)
    }
   exit(1);
   */
+  
   //cout << "fish catch " << endl;
+  
   //calculate proportions at age in the catch
   for(y=fmyear;y<=lmyear;y++)
   { 
@@ -1965,6 +1761,8 @@ void model_parameters::calculate_fishery_catch(void)
   exit(1);
   */
   //calculate variance of expected proportion for catch at age (Fournier - multifanciel)
+   
+
   for(y=fmyear;y<=lmyear;y++)
   {
     for(r=1;r<=region;r++)
@@ -1996,10 +1794,16 @@ void model_parameters::calculate_fishery_catch(void)
   cout << sigma2_Cp << endl;
   exit(1);
   */
-}
+  for(y=fmyear;y<=lmyear;y++)
+  {
+    Catcb1_sd(y)=log(est_region_C(1,1,y)); //tot cat for cb region, timstep1
+    Catcb2_sd(y)=log(est_region_C(1,2,y)); // tot cat for cb region,timestep2
+    Catac1_sd(y)=log(est_region_C(2,1,y)); //tot cat for ac region,timestep1
+    Catac2_sd(y)=log(est_region_C(2,2,y)); //tot cat for ac region,timestep1
+  }
 
-void model_parameters::calculate_F_stock(void)
-{
+FUNCTION calculate_F_stock
+
   //here we are calculating the weighted F
   //Freg_7plus.initialize(); // Initialize the result array
   //for(s=1;s<=stock;s++)
@@ -2028,6 +1832,7 @@ void model_parameters::calculate_F_stock(void)
     Fac1_sd(y)=log(sum(Freg_7plus(2,1,y))); //f mort for ac region, jan-jun
     Fac2_sd(y)=log(sum(Freg_7plus(2,2,y))); //f mort for ac region, jul-dec
   }//close year loop for sd report
+
   //here we are stimating annual F for each stock
   Fbar.initialize(); // Initialize the result array
   for(s=1;s<=stock;s++)
@@ -2047,6 +1852,7 @@ void model_parameters::calculate_F_stock(void)
     }
   }
   //cout << "Fbar" << " " << Fbar << endl;
+
   //calculte F for each stock of fish age 7 and older
   Fplus.initialize(); // Initialize the result array
   for(s=1;s<=stock;s++)
@@ -2063,10 +1869,10 @@ void model_parameters::calculate_F_stock(void)
   //exit(1);
   Fstockcb_sd=log(Fplus(1)); //f mort for cb stock
   Fstockac_sd=log(Fplus(2)); //f mort for ac stock
-}
 
-void model_parameters::calculate_survey_catch(void)
-{
+
+FUNCTION calculate_survey_catch
+
   //calculate the population in each region at each time step first
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2081,6 +1887,7 @@ void model_parameters::calculate_survey_catch(void)
         Nbay(t,y)=N_region(r,t,y); //N in bay in tstep 1 and 2
         r=2;
         Ncoast(t,y)=N_region(r,t,y); //N in coast in tstep 1 and 2
+ 
       //cout << N(1,1,t,y) << endl << endl << N(2,1,t,y) << endl << endl;
       //cout << N(1,2,t,y) << endl << endl << N(2,2,t,y) << endl << endl;
     } //close tstep loop
@@ -2089,9 +1896,11 @@ void model_parameters::calculate_survey_catch(void)
   //cout << Ncoast << endl;
   //exit(1);
   //cout << "nbay ncooast" << endl;
+  
   ////////////////////////
   //  Chesapeake bay    //
   ////////////////////////
+  
   //MD Spawning Stock Survey
   //calculate estimated survey catch at age for each year
   for(y=fmyear;y<=lmyear;y++)
@@ -2118,6 +1927,7 @@ void model_parameters::calculate_survey_catch(void)
   //cout << est_I_md << endl;
   //exit(1);
   mdssn=log(est_I_md);
+
   //ChesMMAP
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2145,9 +1955,11 @@ void model_parameters::calculate_survey_catch(void)
   //cout << "chesmmap" << endl;
   chesmmap1=log(est_I_cm(1)); //sdreport ts 1
   chesmmap2=log(est_I_cm(2)); //sdreport ts2
+  
   ////////////////////////
   //   Atlantic Coast   //
   ////////////////////////
+
   //CT List
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2176,6 +1988,7 @@ void model_parameters::calculate_survey_catch(void)
   //cout << "ct" << endl;
   ctlist1=log(est_I_ct(1)); //sdreport ts 1
   ctlist2=log(est_I_ct(2)); //sdreport ts 1
+
   //NY Ocean Haul Survey
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2194,6 +2007,7 @@ void model_parameters::calculate_survey_catch(void)
   }//close year loop
   //cout << "ny" << endl;
   nyohs=log(est_I_ny); //sdreport
+
   //NJ Bottom Trawl
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2212,6 +2026,7 @@ void model_parameters::calculate_survey_catch(void)
   }//close year loop
   //cout << "nj" << endl;
   njbt=log(est_I_nj); //sdreport
+  
   //DE SSN
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2231,6 +2046,7 @@ void model_parameters::calculate_survey_catch(void)
   }//close year loop
   //cout << "de ssn" << endl;
   dessn=log(est_I_des); //sdreport
+  
   //DE 30
   for(y=fmyear;y<=lmyear;y++)
   {
@@ -2248,9 +2064,12 @@ void model_parameters::calculate_survey_catch(void)
   }//close year loop
   de30=log(est_I_de30); //sdreport
   //cout << "de30" << endl;
+
+ 
   ///*********************************************
   ///            YOY and age 1 survey
   ///********************************************
+  
   //age 1 surveys
   //cout << q_age1n << endl;
   for(y=fmyear;y<=lmyear;y++)
@@ -2302,10 +2121,9 @@ void model_parameters::calculate_survey_catch(void)
     njyoy(y)=log(est_I_yoy_coast(1,y)); //sdreport
     nyyoy(y)=log(est_I_yoy_coast(2,y)); //sdreport
   }
-}
 
-void model_parameters::evaluate_likelihood(void)
-{
+FUNCTION evaluate_likelihood
+
   //lognormal likelihood for total catch
   for(t=1;t<=tstep;t++)
   {
@@ -2327,8 +2145,10 @@ void model_parameters::evaluate_likelihood(void)
       Lcatchagecomp(r,t)=multinom_negLL(obs_Cp(r,t),est_region_Cp(r,t),sigma2_Cp(r,t),fage,lage,fmyear,lmyear);//multinomial for proportions
     }//close region loop
   }//close timestep loop
+  
   //cout << "Lcatchagecomp" << endl;
   //lognormal likelkihood for indices of abundance
+  
   //multinomial for age composition
   //Maryland
   Lindex_md=lognorm_negLL(obs_I_md,est_I_md,I_var_md,fmyear,lmyear);
@@ -2351,6 +2171,7 @@ void model_parameters::evaluate_likelihood(void)
   //DE 30
   Lindex_de30=lognorm_negLL(obs_I_de30,est_I_de30,I_var_de30,fmyear,lmyear);
   Lindexagecomp_de30=multinom_negLL(obs_Ip_de30,est_Ip_de30,sigma2_Ip_de30,sfage_a,slage_a,fmyear,lmyear);//change AGE
+
   //cout << "obs i md"  << endl << obs_I_md << endl << "est i md" << endl << est_I_md << endl << "var" << endl << I_var_md << endl;
   //cout << "end one tstep surv" << endl;
   //cout << est_I_de30 << endl;
@@ -2380,6 +2201,7 @@ void model_parameters::evaluate_likelihood(void)
   //**************************
   //age 1 surveys
   //**************************
+  
   //MD age 1
   Lage1index_md=lognorm_negLL(obs_I_age1m,est_I_age1m,I_var_age1m,fmyear,lmyear);// double check params
   //Lage1index_md=0.;
@@ -2390,6 +2212,7 @@ void model_parameters::evaluate_likelihood(void)
   }
   //Lage1index_ny=0.;
   //cout << "end age 1 lik" << endl;
+
   //*********************
   //YOY surveys
   //********************
@@ -2406,14 +2229,17 @@ void model_parameters::evaluate_likelihood(void)
   //cout << "end yoy like" << endl;
   //cout << Lyoyindex_bay << endl;
   //exit(1);
+
   //pen_N0_dev=0.5*norm2(log_N0_devs/0.49);
   //pen_f2sel=0.5*norm2((log_fs(2,1)-mean(log_fs(2,1))))/0.25;
   if(!last_phase())
   {
     pen_F=0.5*square(sum(log_F)-log(0.3));//assuming normal penalty for log(F)
   }
+
   //pen_r=
   pen_rdev=norm2(log_Rdevs1)+norm2(log_Rdevs2);//recruitment deviation penalty; assumes logscale variable of mean recruiment has SD 1 and mean of 0
+
   pen_fdev=0.;
   for(y=fmyear+1;y<=lmyear;y++)
   {
@@ -2423,6 +2249,7 @@ void model_parameters::evaluate_likelihood(void)
     pen_fdev+=1./square(0.5)*square(log_Fdevs_r2t2(y)-log_Fdevs_r2t2(y-1));
     //square 0.5 suggests that the penalty should have a SD of 0.5 on a normal distribution
   }
+  
   //penalty for occupancy probabilities deviating from priors
   pen_prop=0.;//setting penalty to 0 to start
   for(ts=1;ts<=tstep;ts++)
@@ -2445,8 +2272,10 @@ void model_parameters::evaluate_likelihood(void)
       pen_prop+=0.5*square((log_prop_coast(ts,a)-prop_coast(ts,a))/log_sd_coast(ts,a));//adding for coast fish in the coast
     }//close age loop
   }//close ts loop
+
   //add acoustic occupancy proababilities to pen_prop
   pen_prop_aco=0.0;
+  
   for(ts=1;ts<=tstep;ts++)
   {
     for(a=fage+1;a<=lage;a++)
@@ -2459,15 +2288,19 @@ void model_parameters::evaluate_likelihood(void)
       //{
         if(acoustic_prop_sd(ts,a)!=-99)
         {
-          pen_prop_aco+=0.5*square((log((1-acoustic_prop(ts,a))+0.01)-prop_bay(ts,a))/acoustic_prop_sd(ts,a)); //prop sd is entered on the log scale already, techinally the CV (log(SD/mean+0.01)
-        }
+          //pen_prop_aco+=0.5*square((log((1-acoustic_prop(ts,a))+0.01)-prop_bay(ts,a))/acoustic_prop_sd(ts,a)); //prop sd is entered on the log scale already, techinally the CV (log(SD/mean+0.01)
+          pen_prop_aco+=0.5*square(((1-acoustic_prop(ts,a))-mfexp(prop_bay(ts,a)))/acoustic_prop_sd(ts,a)); //acoustic is not on log scale, so transposing to be the same
+       }
       //}//close else
     }
   }
+  
+
   //cout << "with added penalty" << endl << pen_prop << endl;
   //cout << "log prop coast" << endl << log_prop_coast << endl;
   //cout << "prop coast" << endl << prop_coast << endl;
   //exit(1);
+
   //penalty for proportion of CB fish in the coast
   //pen_prop_bay=-765.*0.65*log(0.01+sum(N(1,2,2,lmyear)(4,lage))/sum(N(1,2,2,lmyear)(4,lage)+N(2,2,2,lmyear)(4,lage)));//binomial log likelihood, taking neg for NLL
   //765 was ESS
@@ -2485,21 +2318,24 @@ void model_parameters::evaluate_likelihood(void)
   //cout << "pen prop" << endl << pen_prop_bay << endl;
   //cout << "est c age err" << endl << est_C_age << endl;
   //exit(1);
+
   //cout << log_sf3_cb(1,2) << endl;
   //exit(1);
   //prior for descending limb of chesapeake bay fsel
-   pen_cb_sel=//0.5*square((log_sf1_cb(1,2)-0.)/0.5)+ //ascending param slope for the first timeblock
+  
+  pen_cb_sel=//0.5*square((log_sf1_cb(1,2)-0.)/0.5)+ //ascending param slope for the first timeblock
              0.5*square((log_sf2_cb(1,2)-1.098)/0.5)+ //ascending param 50% sel
              0.5*square((log_sf3_cb(1,1)-0.)/0.25)+ //descending param slope for the first timeblock
              //0.5*square((log_sf4_cb(1,1)-4.)/0.25)+//+//descending param 50% selc for the first timeblock
-             0.5*square((log_sf3_cb(1,2)-0.)/0.25)+ //descending param slope for the first timeblock
-             0.5*square((log_sf4_cb(1,2)-4.)/0.25)+//+//descending param 50% selc for the first timeblock
+             0.5*square((log_sf3_cb(1,2)-0.)/0.25);//+ //descending param slope for the first timeblock
+             //0.5*square((log_sf4_cb(1,2)-4.)/0.25);//+//descending param 50% selc for the first timeblock
              //0.5*square((log_sf3_cb(2,2)-0.)/0.5)+//descending param slope for the 2nd timeblock
-             0.5*square((log_sf4_cb(2,2)-3.)/0.5);//descending param 50% selc for the 2nd timeblock
+             //0.5*square((log_sf4_cb(2,2)-4.)/0.5)+//descending param 50% selc for the 2nd timeblock
              //0.5*square((log_sf3_cb(3,2)-0.)/0.5)+//descending param slope for the 3rd timeblock
              //0.5*square((log_sf4_cb(3,2)-4.)/0.5)+ //descending params for fsel in the 3rdd timeblock
              //0.5*square((log_sf3_cb(4,2)-0.)/0.5)+//descending param slope for the 4th timeblock
              //0.5*square((log_sf4_cb(4,2)-4.)/0.5); //descending params for fsel in the 4th timeblock
+  
   //pen_cb_sel=0.;
   pen_sf=0.0;
   if(log_sf4_cb(3,2)<log_sf2_cb(3,2))
@@ -2515,11 +2351,8 @@ void model_parameters::evaluate_likelihood(void)
   {
     pen_sf_ct+=10.*square(log_ssf4_ct(2)-log_ssf2_ct(2));
   }
-  pen_sf_ny=0.0;
-  if(log_ssf4_ny<log_ssf2_ny)
-  {
-    pen_sf_ny=10.*square(log_ssf4_ny-log_ssf2_ny);
-  }
+  
+
   pen_feq=0.5*square((mfexp(log_Feq(1))-0.3)/0.1);
   //add all the components of the negative log likelihood together
   //neg_LL=sum(Lcatch)+sum(Lcatchagecomp)+sum(Lindex_a)+sum(Lindex_b)+sum(Lindex_c)+sum(Lindexagecomp_a)+sum(Lindexagecomp_b)+sum(Lindexagecomp_c)+sum(Lage1index)+sum(Lyoyindex)+Lfsel+Lssel_a+Lssel_b+Lssel_c+pen_N0_dev+pen_f2sel+pen_F; 
@@ -2527,7 +2360,7 @@ void model_parameters::evaluate_likelihood(void)
   neg_LL=sum(Lcatch)+sum(Lcatchagecomp)+Lindex_md+sum(Lindex_cm)+Lindex_ny+Lindex_nj+sum(Lindex_ct)+Lindex_des+
           Lindex_de30+Lindexagecomp_md+sum(Lindexagecomp_cm)+Lindexagecomp_ny+Lindexagecomp_nj+sum(Lindexagecomp_ct)+
           Lindexagecomp_des+Lindexagecomp_de30+Lage1index_md+sum(Lage1index_ny)+sum(Lyoyindex_bay)+sum(Lyoyindex_coast)+
-          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct+pen_sf_ny;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
+          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
   /*
   cout << "neg_LL " << endl << neg_LL << " = " << sum(Lcatch) << " sum(Lcatch)" << " + " << sum(Lcatchagecomp) << " sum (Lcatchagecomp" <<  " + " << Lindex_md << "Lindex_md" << " + " <<
   sum(Lindex_cm) << endl << " L index cm + " << Lindex_ny << " L Index ny + " << Lindex_nj << " Lindex nj +" << sum(Lindex_ct) << " L index ct + " << endl << Lindex_des << " L index des + "
@@ -2541,15 +2374,11 @@ void model_parameters::evaluate_likelihood(void)
   //cout << "end neg_ll" << endl;
   //exit(1);
   */
-}
 
-dvar_vector model_parameters::migrate(dvar_vector N,dvar_vector P)
-{
+FUNCTION dvar_vector migrate(dvar_vector N,dvar_vector P)
   return(elem_prod(N,P));
-}
 
-dvariable model_parameters::beta_mig(dvar_vector occ_prob, dvector alpha, dvector beta)
-{
+FUNCTION dvariable beta_mig(dvar_vector occ_prob, dvector alpha, dvector beta)
   dvariable betaLL;
   betaLL=0.0;
   for(a=fage+1;a<=lage;a++)
@@ -2557,10 +2386,9 @@ dvariable model_parameters::beta_mig(dvar_vector occ_prob, dvector alpha, dvecto
     betaLL+=-(alpha(a)-1)*log(occ_prob(a))-(beta(a)-1)*log(1-occ_prob(a));
   }
   return(betaLL);
-}
 
-dvariable model_parameters::lognorm_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, data_int lmyear)
-{
+  
+FUNCTION dvariable lognorm_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, data_int lmyear)
   dvariable negLL;
   negLL=0.0;
   for(y=fmyear;y<=lmyear;y++)
@@ -2572,10 +2400,8 @@ dvariable model_parameters::lognorm_negLL(dvector obsI, dvar_vector estI, dvecto
   }
   //negLL=norm2(elem_div(log(obsI(fmyear,lmyear))-log(estI),(2.*Ivar)));
   return(negLL);
-}
 
-dvariable model_parameters::lognormyoy_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, data_int lmyear)
-{
+FUNCTION dvariable lognormyoy_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, data_int lmyear)
   dvariable negLL;
   negLL=0.0;
   for(y=fmyear;y<=lmyear;y++)
@@ -2587,10 +2413,8 @@ dvariable model_parameters::lognormyoy_negLL(dvector obsI, dvar_vector estI, dve
   }
   //negLL=norm2(elem_div(log(obsI(fmyear,lmyear))-log(estI),(2.*Ivar)));
   return(negLL);
-}
-
-dvariable model_parameters::lognormyoy_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, int lmyear)
-{
+  
+FUNCTION dvariable lognormyoy_negLL(dvector obsI, dvar_vector estI, dvector Ivar, data_int fmyear, int lmyear)
   dvariable negLL;
   negLL=0.0;
   for(y=fmyear;y<=lmyear;y++)
@@ -2602,10 +2426,8 @@ dvariable model_parameters::lognormyoy_negLL(dvector obsI, dvar_vector estI, dve
   }
   //negLL=norm2(elem_div(log(obsI(fmyear,lmyear))-log(estI),(2.*Ivar)));
   return(negLL);
-}
 
-dvariable model_parameters::multinom_negLL(data_matrix obsP, named_dvar_matrix estP, named_dvar_matrix sigma2, int fage, int lage, int fyear, int lyear)
-{
+FUNCTION dvariable multinom_negLL(data_matrix obsP, named_dvar_matrix estP, named_dvar_matrix sigma2, int fage, int lage, int fyear, int lyear)
   dvariable negLL; //declaring new variable called negLL
   negLL=0.0;
   for(y=fyear;y<=lyear;y++)
@@ -2620,10 +2442,8 @@ dvariable model_parameters::multinom_negLL(data_matrix obsP, named_dvar_matrix e
     }
   }
   return(negLL);
-}
-
-dvariable model_parameters::multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_matrix sigma2, int fage, int lage, int fyear, int lyear)
-{
+  
+FUNCTION dvariable multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_matrix sigma2, int fage, int lage, int fyear, int lyear)
   dvariable negLL; //declaring new variable called negLL
   negLL=0.0;
   for(y=fyear;y<=lyear;y++)
@@ -2638,10 +2458,8 @@ dvariable model_parameters::multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_
     }
   }
   return(negLL);
-}
 
-dvariable model_parameters::multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_matrix sigma2, data_int fage, data_int lage, int fyear, int lyear)
-{
+FUNCTION dvariable multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_matrix sigma2, data_int fage, data_int lage, int fyear, int lyear)
   dvariable negLL; //declaring new variable called negLL
   negLL=0.0;
   for(y=fyear;y<=lyear;y++)
@@ -2656,10 +2474,8 @@ dvariable model_parameters::multinom_negLL(dmatrix obsP, dvar_matrix estP, dvar_
     }
   }
   return(negLL);
-}
 
-dvariable model_parameters::multinom_negLL(data_matrix obsP, named_dvar_matrix estP, named_dvar_matrix sigma2, data_int fage, data_int lage, int fyear, int lyear)
-{
+FUNCTION dvariable multinom_negLL(data_matrix obsP, named_dvar_matrix estP, named_dvar_matrix sigma2, data_int fage, data_int lage, int fyear, int lyear)
   dvariable negLL; //declaring new variable called negLL
   negLL=0.0;
   for(y=fyear;y<=lyear;y++)
@@ -2675,10 +2491,7 @@ dvariable model_parameters::multinom_negLL(data_matrix obsP, named_dvar_matrix e
   }
   return(negLL);
   /*
-}
-
-dvariable model_parameters::logisticnorm_negLL(dvector obsP, dvar_vector estP, prevariable sigma2, data_int fage, data_int lage, data_int fyear, data_int lyear, double ESS,  prevariable phi, int B )
-{
+FUNCTION dvariable logisticnorm_negLL(dvector obsP, dvar_vector estP, prevariable sigma2, data_int fage, data_int lage, data_int fyear, data_int lyear, double ESS,  prevariable phi, int B )
   dvariable negLL; //declaring variable called negLL
   //ivector B(fyear,lyear); //max age with observerd proportion > 0
   dvar_matrix V(fage,B-1,fage,B-1); //declaring variable called V, defined as Bins*variance^(2*(bins-1))
@@ -2690,21 +2503,27 @@ dvariable model_parameters::logisticnorm_negLL(dvector obsP, dvar_vector estP, p
   //b=double(B);
   int a1;
   int a2;
+
  // W=sqrt(ESS/double(lyear-fyear+1));
   negLL=0.0; //starting calculations for logistic normal likelihood
   for(a1=fage;a1<=B-1;a1++)
     {
       V(a1,a1)=sigma2; //the diagonals, equation from Francis 2014, pow(base,root) is raised to a power
+   
       for(a2=fage;a2<=B-1;a2++)
       {
         if(a2!=a1)
         {
           V(a1,a2)=pow(phi,abs(double(a1-a2)))*V(a1,a1); // correlation * variance
         }
+
        //cout << a1 << " " << a2 << endl;
       }
     }
+
+  
     Vinv=inv(V);
+    
     for(a=fage;a<=B-1;a++)
         {
          if(obsP(a)!=-99)
@@ -2722,6 +2541,7 @@ dvariable model_parameters::logisticnorm_negLL(dvector obsP, dvar_vector estP, p
     //cout << "w " << w << endl;
     //cout << "Obs Pa " << obsP << endl;
     //cout << "Est Pa " << estP << endl;
+    
     for(a=fage;a<=B-1;a++)
     {
     if(obsP(a)>0 && estP(a)>0 && estP(B)>0)
@@ -2734,18 +2554,10 @@ dvariable model_parameters::logisticnorm_negLL(dvector obsP, dvar_vector estP, p
     negLL+=0.5*w*(Vinv)*w;//last term of likelihood equation
   return(negLL);
   */
-}
 
-void model_parameters::report(const dvector& gradients)
-{
- adstring ad_tmp=initial_params::get_reportfile_name();
-  ofstream report((char*)(adprogram_name + ad_tmp));
-  if (!report)
-  {
-    cerr << "error trying to open report file"  << adprogram_name << ".rep";
-    return;
-  }
+REPORT_SECTION
   //The report section is used to write output to the standard output "filename.rep"
+  
   report << "observed catch" << endl << obs_C << endl;
   report << "estimated catch" << endl << est_region_C << endl;
   //report << "observed index" << endl << obs_I << endl;
@@ -2756,6 +2568,7 @@ void model_parameters::report(const dvector& gradients)
   report << "fishing mortality" << endl << F << endl;
   report << "biomass" << endl << B << endl;
   report << "SSB" << endl << SSB << endl;
+  
   ofstream catout("catch.txt");
   {
     catout << "year timestep region logobs logpred " << endl;
@@ -2770,6 +2583,8 @@ void model_parameters::report(const dvector& gradients)
       }//close tstep
     }//close yr
    }//close ofstream
+   
+  
     ofstream ioaout("ioa.txt");
     {
         ioaout << "agegroup survey year timestep obsioa predioa sd" << endl;
@@ -2787,6 +2602,8 @@ void model_parameters::report(const dvector& gradients)
           }//close timestep
        }//close year
      }//close ofstream
+       
+  
    ofstream obscaa("ocaa.txt");//obs fishery catch at age
    {
      obscaa << " region timestep year age obscat obscaa estcaa standardresid" << endl;
@@ -2804,6 +2621,7 @@ void model_parameters::report(const dvector& gradients)
      }//close tstep
      }//close yr
    }//close ofstream
+   
    ofstream obssaa("osaa.txt");
    {
      obssaa << "agegroup survey year timestep age obscat obssaa estsaa standardresid" << endl;
@@ -2826,6 +2644,7 @@ void model_parameters::report(const dvector& gradients)
          }//close tstep
        }//close age
      }//close year
+     
     for(y=fmyear;y<=lmyear;y++)
     {
       for(a=sfage_b;a<=slage_b;a++)
@@ -2843,6 +2662,7 @@ void model_parameters::report(const dvector& gradients)
        }//close age
      }//close year
    }//close of stream
+   
    ofstream fselout("fsel.txt");//fsel at age
    {
      fselout << "region timestep year age fsel" << endl;
@@ -2860,6 +2680,7 @@ void model_parameters::report(const dvector& gradients)
        }//clse year
      }//closeregion
    }//close ofstream
+   
    ofstream sselout("ssel.txt");//survey selectivty
    {
      sselout << "agegroup survey timestep age ssel" << endl;
@@ -2883,6 +2704,8 @@ void model_parameters::report(const dvector& gradients)
      sselout << "2-13 " << "DESSN" << " " << "1" << " " << a << " " << log(ssel_des(a)) << endl;
     }
    }
+
+
    ofstream obsage1("age1.txt");
    {
      obsage1 << "survey year timestep obs est sd" << endl;
@@ -2895,6 +2718,7 @@ void model_parameters::report(const dvector& gradients)
        }
      }
    }
+
    ofstream obsyoy("yoy.txt");
    {
      obsyoy << "region survey year obsyoy estyoy sd" << endl;
@@ -2902,6 +2726,7 @@ void model_parameters::report(const dvector& gradients)
      {
       for(z=1;z<=yoysurv_coast;z++)
       {
+              
         if(obs_I_yoy_coast(z,y)!=-99) obsyoy << "coast" << " " <<  z  << " " << y << " " <<  log(obs_I_yoy_coast(z,y)+0.001) << " " <<  log(est_I_yoy_coast(z,y)+0.001) << " " << obs_I_yoy_CV_coast(z,y) << endl;
        }//close z loop
       for(z=1;z<=yoysurv_bay;z++)
@@ -2910,6 +2735,8 @@ void model_parameters::report(const dvector& gradients)
    }//close z loop
      }//close year loop
    }//close of stream
+   
+   
    ofstream pop("pop.txt");// pop across years
    {
       pop << "stock region timstep year age  pop " << endl; 
@@ -2930,6 +2757,7 @@ void model_parameters::report(const dvector& gradients)
       }//close tstep
      }//close year
    }
+  
    ofstream mort("f.txt");// pop across years
    {
      mort << "region timestep year age  f " << endl; 
@@ -2947,6 +2775,7 @@ void model_parameters::report(const dvector& gradients)
             }//close year
         }//close region loop
     }//close ofstream
+
    ofstream weightf("weightf.txt");
    {
      weightf << "region timestep year age  f " << endl;
@@ -2964,6 +2793,7 @@ void model_parameters::report(const dvector& gradients)
             }//close year
         }//close region loop
    }//close ofstream
+
    ofstream stockF("stockF.txt");
    {
      stockF << "year stock f" << endl;
@@ -2975,6 +2805,7 @@ void model_parameters::report(const dvector& gradients)
        }//close stock loop
      }//close year loop
    }//close ofstream
+
    ofstream like("lik.txt");
    {
      like << "name likelihood" << endl;
@@ -3013,6 +2844,8 @@ void model_parameters::report(const dvector& gradients)
      //like << " " << "total_yoy_index" << " " << sum(Lyoyindex_bay)+sum(Lyoyindex_coast) << endl;
      //like << " " << "total_neg_ll" << " " << neg_LL << endl;
    }
+ 
+   
    ofstream occprob("occ.txt");//occupancy probability
    {
      occprob << "param stock timestep age prob logsd" << endl;
@@ -3030,6 +2863,8 @@ void model_parameters::report(const dvector& gradients)
          }//close tstep 
        //}//close stock loop
     }//close ofstream
+
+
    ofstream ssb("ssb.txt");//spawning stock biomass
    {
      ssb << "stock region year ssb" << endl;
@@ -3044,6 +2879,7 @@ void model_parameters::report(const dvector& gradients)
          }//close region 
        }//close stock loop
     }//close ofstream
+
    ofstream bio("biomass.txt");//spawning stock biomass
    {
      bio << "stock region year bio" << endl;
@@ -3061,84 +2897,15 @@ void model_parameters::report(const dvector& gradients)
          }//close region 
        }//close stock loop
     }//close ofstream
-}
 
-void model_parameters::set_runtime(void)
-{
-  dvector temp1("{20000, 20000, 20000 //change the maximum number of iterations for each phase}");
-  maximum_function_evaluations.allocate(temp1.indexmin(),temp1.indexmax());
-  maximum_function_evaluations=temp1;
-}
+RUNTIME_SECTION
 
-void model_parameters::preliminary_calculations(void){
-#if defined(USE_ADPVM)
-
-  admaster_slave_variable_interface(*this);
-
-#endif
-}
-
-model_data::~model_data()
-{}
-
-model_parameters::~model_parameters()
-{}
-
-void model_parameters::final_calcs(void){}
-
-#ifdef _BORLANDC_
-  extern unsigned _stklen=10000U;
-#endif
+  maximum_function_evaluations 20000, 20000, 20000 //change the maximum number of iterations for each phase
+  
+  
 
 
-#ifdef __ZTC__
-  extern unsigned int _stack=10000U;
-#endif
+  
+  
 
-  long int arrmblsize=0;
 
-int main(int argc,char * argv[])
-{
-    ad_set_new_handler();
-  ad_exit=&ad_boundf;
-  gradient_structure::set_MAX_NVAR_OFFSET(1000);
-  gradient_structure::set_NUM_DEPENDENT_VARIABLES(100000);
-  gradient_structure::set_GRADSTACK_BUFFER_SIZE(100000);
-  gradient_structure::set_CMPDIF_BUFFER_SIZE(1000000);
-  arrmblsize=900000;
-    gradient_structure::set_NO_DERIVATIVES();
-#ifdef DEBUG
-  #ifndef __SUNPRO_C
-std::feclearexcept(FE_ALL_EXCEPT);
-  #endif
-#endif
-    gradient_structure::set_YES_SAVE_VARIABLES_VALUES();
-    if (!arrmblsize) arrmblsize=15000000;
-    model_parameters mp(arrmblsize,argc,argv);
-    mp.iprint=10;
-    mp.preliminary_calculations();
-    mp.computations(argc,argv);
-#ifdef DEBUG
-  #ifndef __SUNPRO_C
-bool failedtest = false;
-if (std::fetestexcept(FE_DIVBYZERO))
-  { cerr << "Error: Detected division by zero." << endl; failedtest = true; }
-if (std::fetestexcept(FE_INVALID))
-  { cerr << "Error: Detected invalid argument." << endl; failedtest = true; }
-if (std::fetestexcept(FE_OVERFLOW))
-  { cerr << "Error: Detected overflow." << endl; failedtest = true; }
-if (std::fetestexcept(FE_UNDERFLOW))
-  { cerr << "Error: Detected underflow." << endl; }
-if (failedtest) { std::abort(); } 
-  #endif
-#endif
-    return 0;
-}
-
-extern "C"  {
-  void ad_boundf(int i)
-  {
-    /* so we can stop here */
-    exit(i);
-  }
-}

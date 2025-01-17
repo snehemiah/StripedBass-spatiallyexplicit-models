@@ -719,6 +719,7 @@ PARAMETER_SECTION
   number pen_sf
   number pen_sf_ct
   number pen_sf_ny
+  number pen_sf_nj
 
   objective_function_value neg_LL  //value we are going to minimize
 
@@ -995,7 +996,7 @@ FUNCTION calculate_mortality
         {
           fsel(r,ts,y,a)=1./(1.+mfexp(-sf1_ac(t,ts)*(double(a)-sf2_ac(t,ts))));
         }//close age loop
-        fsel(r,ts,y)/=max(fsel(r,ts,y));
+        //fsel(r,ts,y)/=max(fsel(r,ts,y));
       }//close tstep
    } //close year loop for fsel
   }//close time block
@@ -1091,7 +1092,7 @@ FUNCTION calculate_mortality
   for(t=1;t<=tstep;t++)
   {
     ssel_ct(t)/=max(ssel_ct(t));
-    ssel_cm(t)/=max(ssel_cm(t));
+    //ssel_cm(t)/=max(ssel_cm(t));
   }
 
   //cout << "end ssel group a" << endl;
@@ -1105,7 +1106,7 @@ FUNCTION calculate_mortality
     ssel_nj(a)=(1./(1.+mfexp(-ssf1_nj*(double(a)-ssf2_nj))))*
                   (1./(1.+mfexp(-ssf3_nj*(ssf4_nj- double(a)))));
   }//close age loop
-  ssel_md/=max(ssel_md);
+  //ssel_md/=max(ssel_md);
   ssel_nj/=max(ssel_nj);
   //cout << "end ssel group b" << endl;
 
@@ -1121,7 +1122,7 @@ FUNCTION calculate_mortality
     
   }//close age loop
   ssel_ny/=max(ssel_ny);
-  ssel_des/=max(ssel_des);
+  //ssel_des/=max(ssel_des);
   //cout << "end ssel group c" << endl;
   //exit(1);
   /*
@@ -2271,7 +2272,7 @@ FUNCTION evaluate_likelihood
       //{
         if(acoustic_prop_sd(ts,a)!=-99)
         {
-          pen_prop_aco+=0.5*square((log((1-acoustic_prop(ts,a))+0.01)-prop_bay(ts,a))/acoustic_prop_sd(ts,a)); //prop sd is entered on the log scale already, techinally the CV (log(SD/mean+0.01)
+           pen_prop_aco+=0.5*square(((1-acoustic_prop(ts,a))-mfexp(prop_bay(ts,a)))/acoustic_prop_sd(ts,a)); //acoustic is not on log scale, so transposing to be the same
         }
       //}//close else
     }
@@ -2307,22 +2308,26 @@ FUNCTION evaluate_likelihood
   
    pen_cb_sel=//0.5*square((log_sf1_cb(1,2)-0.)/0.5)+ //ascending param slope for the first timeblock
              0.5*square((log_sf2_cb(1,2)-1.098)/0.5)+ //ascending param 50% sel
-             0.5*square((log_sf3_cb(1,1)-0.)/0.25)+ //descending param slope for the first timeblock
+             //0.5*square((log_sf3_cb(1,1)-0.)/0.25)+ //descending param slope for the first timeblock
              //0.5*square((log_sf4_cb(1,1)-4.)/0.25)+//+//descending param 50% selc for the first timeblock
              0.5*square((log_sf3_cb(1,2)-0.)/0.25)+ //descending param slope for the first timeblock
              0.5*square((log_sf4_cb(1,2)-4.)/0.25)+//+//descending param 50% selc for the first timeblock
              //0.5*square((log_sf3_cb(2,2)-0.)/0.5)+//descending param slope for the 2nd timeblock
-             0.5*square((log_sf4_cb(2,2)-3.)/0.5);//descending param 50% selc for the 2nd timeblock
+             0.5*square((log_sf4_cb(2,2)-3.)/0.5)+//descending param 50% selc for the 2nd timeblock
              //0.5*square((log_sf3_cb(3,2)-0.)/0.5)+//descending param slope for the 3rd timeblock
-             //0.5*square((log_sf4_cb(3,2)-4.)/0.5)+ //descending params for fsel in the 3rdd timeblock
-             //0.5*square((log_sf3_cb(4,2)-0.)/0.5)+//descending param slope for the 4th timeblock
-             //0.5*square((log_sf4_cb(4,2)-4.)/0.5); //descending params for fsel in the 4th timeblock
+             0.5*square((log_sf4_cb(3,2)-4.)/0.5)+ //descending params for fsel in the 3rdd timeblock
+             0.5*square((log_sf3_cb(4,2)-0.)/0.5)+//descending param slope for the 4th timeblock
+             0.5*square((log_sf4_cb(4,2)-4.)/0.5); //descending params for fsel in the 4th timeblock
   
   //pen_cb_sel=0.;
   pen_sf=0.0;
   if(log_sf4_cb(3,2)<log_sf2_cb(3,2))
   {
-    pen_sf=10.*square(log_sf4_cb(3,2)-log_sf2_cb(3,2));
+    pen_sf+=10.*square(log_sf4_cb(3,2)-log_sf2_cb(3,2));
+  }
+  if(log_sf4_cb(4,2)<log_sf2_cb(4,2))
+  {
+    pen_sf+=10.*square(log_sf4_cb(4,2)-log_sf2_cb(4,2));
   }
   pen_sf_ct=0.0;
   if(log_ssf4_ct(1)<log_ssf2_ct(1))
@@ -2338,6 +2343,11 @@ FUNCTION evaluate_likelihood
   {
     pen_sf_ny=10.*square(log_ssf4_ny-log_ssf2_ny);
   }
+  pen_sf_nj=0.0;
+   if(log_ssf4_nj<log_ssf2_nj)
+  {
+    pen_sf_nj+=10.*square(log_ssf4_nj-log_ssf2_nj);
+  }
   
   pen_feq=0.5*square((mfexp(log_Feq(1))-0.3)/0.1);
   //add all the components of the negative log likelihood together
@@ -2346,7 +2356,7 @@ FUNCTION evaluate_likelihood
   neg_LL=sum(Lcatch)+sum(Lcatchagecomp)+Lindex_md+sum(Lindex_cm)+Lindex_ny+Lindex_nj+sum(Lindex_ct)+Lindex_des+
           Lindex_de30+Lindexagecomp_md+sum(Lindexagecomp_cm)+Lindexagecomp_ny+Lindexagecomp_nj+sum(Lindexagecomp_ct)+
           Lindexagecomp_des+Lindexagecomp_de30+Lage1index_md+sum(Lage1index_ny)+sum(Lyoyindex_bay)+sum(Lyoyindex_coast)+
-          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct+pen_sf_ny;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
+          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct+pen_sf_ny+pen_sf_nj;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
   /*
   cout << "neg_LL " << endl << neg_LL << " = " << sum(Lcatch) << " sum(Lcatch)" << " + " << sum(Lcatchagecomp) << " sum (Lcatchagecomp" <<  " + " << Lindex_md << "Lindex_md" << " + " <<
   sum(Lindex_cm) << endl << " L index cm + " << Lindex_ny << " L Index ny + " << Lindex_nj << " Lindex nj +" << sum(Lindex_ct) << " L index ct + " << endl << Lindex_des << " L index des + "

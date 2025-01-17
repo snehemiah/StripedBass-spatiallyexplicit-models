@@ -608,7 +608,7 @@ PARAMETER_SECTION
   matrix SSB_w(fmyear,lmyear,fage,lage) //estimated SSBweight at age, adjusted from rivard weight
 
   3darray B(1,stock,1,region,fmyear,lmyear) //estimated biomass for each year
-  4darray SSB(1,stock,1,region,fmyear,lmyear,fage,lage)  //estimated spawning stock biomass for each year
+  3darray SSB(1,stock,1,region,fmyear,lmyear)  //estimated spawning stock biomass for each year
   vector J_w(fmyear,lmyear) //estimated january 1 biomass at age
 
   init_bounded_matrix log_prop_bay(1,tstep,fage+1,lage,-10,0,5) //log occupancy probabilities at age for the chesapeak bay stock in the bay in each timstep
@@ -721,6 +721,7 @@ PARAMETER_SECTION
   number pen_feq
   number pen_sf
   number pen_sf_ct
+  number pen_sf_ny
 
   objective_function_value neg_LL  //value we are going to minimize
 
@@ -997,7 +998,7 @@ FUNCTION calculate_mortality
         {
           fsel(r,ts,y,a)=1./(1.+mfexp(-sf1_ac(t,ts)*(double(a)-sf2_ac(t,ts))));
         }//close age loop
-        fsel(r,ts,y)/=max(fsel(r,ts,y));
+        //fsel(r,ts,y)/=max(fsel(r,ts,y));
       }//close tstep
    } //close year loop for fsel
   }//close time block
@@ -1093,7 +1094,7 @@ FUNCTION calculate_mortality
   for(t=1;t<=tstep;t++)
   {
     ssel_ct(t)/=max(ssel_ct(t));
-    ssel_cm(t)/=max(ssel_cm(t));
+    //ssel_cm(t)/=max(ssel_cm(t));
   }
 
   //cout << "end ssel group a" << endl;
@@ -1107,7 +1108,7 @@ FUNCTION calculate_mortality
     ssel_nj(a)=(1./(1.+mfexp(-ssf1_nj*(double(a)-ssf2_nj))))*
                   (1./(1.+mfexp(-ssf3_nj*(ssf4_nj- double(a)))));
   }//close age loop
-  ssel_md/=max(ssel_md);
+  //ssel_md/=max(ssel_md);
   ssel_nj/=max(ssel_nj);
   //cout << "end ssel group b" << endl;
 
@@ -1123,7 +1124,7 @@ FUNCTION calculate_mortality
     
   }//close age loop
   ssel_ny/=max(ssel_ny);
-  ssel_des/=max(ssel_des);
+  //ssel_des/=max(ssel_des);
   //cout << "end ssel group c" << endl;
   //exit(1);
   /*
@@ -1662,6 +1663,7 @@ FUNCTION calculate_N_at_age
   
 FUNCTION calculate_B_SSB
   
+  
   for(y=fmyear;y<=lmyear;y++)
   {
     for(s=1;s<=stock;s++)
@@ -1669,10 +1671,7 @@ FUNCTION calculate_B_SSB
       for(r=1;r<=region;r++)
       {
         B(s,r,y)=N(s,r,1,y)*rw_age(y)/1000; //January 1 Biomass; using catch  weight at age
-        for(a=fage;a<=lage;a++)
-        {
-          SSB(s,r,y,a)=(N(s,r,1,y,a)*sex(a)*ssbw_age(y,a)*m_age(a))/1000; //Female Spawning Stock biomass
-        }//clsoe age loop
+        SSB(s,r,y)=N(s,r,1,y)*elem_prod(sex,elem_prod(ssbw_age(y),m_age))/1000; //Female Spawning Stock biomass
       }//close region loop
     }//close stock loop
   }//close year loop
@@ -1683,10 +1682,18 @@ FUNCTION calculate_B_SSB
   //fill sd report params
   for(y=fmyear;y<=lmyear;y++)
   {
-    logSSB_cb(y)=log(sum(SSB(1,1,y))+sum(SSB(1,2,y))); //cb stock in both regions
-    logSSB_ac(y)=log(sum(SSB(2,1,y))+sum(SSB(2,2,y))); //ac stock in both region
+    logSSB_cb(y)=log(SSB(1,1,y)+SSB(1,2,y)); //cb stock in both regions
+    logSSB_ac(y)=log(SSB(2,1,y)+SSB(2,2,y)); //ac stock in both region
   }//close year loop
- 
+  /*
+  for(y=fmyear;y<=lmyear;y++)
+  {
+    logSSB_cbincb(y)=log(SSB(1,1,y)); //cb stock in CB
+    logSSB_cbinac(y)=log(SSB(1,2,y)); //cb stock in ac region
+      logSSB_acincb(y)=log(SSB(2,1,y)); //ac stock in cb region
+    logSSB_acinac(y)=log(SSB(2,2,y)); //ac stock in ac region
+  }//close year loop
+  */
 
 
 FUNCTION calculate_fishery_catch
@@ -2309,7 +2316,7 @@ FUNCTION evaluate_likelihood
       //{
         if(acoustic_prop_sd(ts,a)!=-99)
         {
-          pen_prop_aco+=0.5*square((log((1-acoustic_prop(ts,a))+0.01)-prop_bay(ts,a))/acoustic_prop_sd(ts,a)); //prop sd is entered on the log scale already, techinally the CV (log(SD/mean+0.01)
+           pen_prop_aco+=0.5*square(((1-acoustic_prop(ts,a))-mfexp(prop_bay(ts,a)))/acoustic_prop_sd(ts,a)); //acoustic is not on log scale, so transposing to be the same
         }
       //}//close else
     }
@@ -2360,7 +2367,11 @@ FUNCTION evaluate_likelihood
   pen_sf=0.0;
   if(log_sf4_cb(3,2)<log_sf2_cb(3,2))
   {
-    pen_sf=10.*square(log_sf4_cb(3,2)-log_sf2_cb(3,2));
+    pen_sf+=10.*square(log_sf4_cb(3,2)-log_sf2_cb(3,2));
+  }
+   if(log_sf4_cb(4,2)<log_sf2_cb(4,2))
+  {
+    pen_sf+=10.*square(log_sf4_cb(4,2)-log_sf2_cb(4,2));
   }
   pen_sf_ct=0.0;
   if(log_ssf4_ct(1)<log_ssf2_ct(1))
@@ -2370,6 +2381,11 @@ FUNCTION evaluate_likelihood
   if(log_ssf4_ct(2)<log_ssf2_ct(2))
   {
     pen_sf_ct+=10.*square(log_ssf4_ct(2)-log_ssf2_ct(2));
+  }
+  pen_sf_ny=0.;
+   if(log_ssf4_ny<log_ssf2_ny)
+  {
+    pen_sf_ny+=10.*square(log_ssf4_ny-log_ssf2_ny);
   }
   
   //pen_ac_sel=0.;
@@ -2382,7 +2398,7 @@ FUNCTION evaluate_likelihood
   neg_LL=sum(Lcatch)+sum(Lcatchagecomp)+Lindex_md+sum(Lindex_cm)+Lindex_ny+Lindex_nj+sum(Lindex_ct)+Lindex_des+
           Lindex_de30+Lindexagecomp_md+sum(Lindexagecomp_cm)+Lindexagecomp_ny+Lindexagecomp_nj+sum(Lindexagecomp_ct)+
           Lindexagecomp_des+Lindexagecomp_de30+Lage1index_md+sum(Lage1index_ny)+sum(Lyoyindex_bay)+sum(Lyoyindex_coast)+
-          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_ac_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
+          pen_F+pen_prop+pen_prop_aco+pen_prop_bay+pen_cb_sel+pen_ac_sel+pen_rdev+pen_fdev+pen_feq+pen_sf+pen_sf_ct+pen_sf_ny;//sum(Lfsel)+Lssel_md+sum(Lssel_cm)+Lssel_ny+Lssel_nj+sum(Lssel_ct)+Lssel_des+Lssel_de30
   /*
   cout << "neg_LL " << endl << neg_LL << " = " << sum(Lcatch) << " sum(Lcatch)" << " + " << sum(Lcatchagecomp) << " sum (Lcatchagecomp" <<  " + " << Lindex_md << "Lindex_md" << " + " <<
   sum(Lindex_cm) << endl << " L index cm + " << Lindex_ny << " L Index ny + " << Lindex_nj << " Lindex nj +" << sum(Lindex_ct) << " L index ct + " << endl << Lindex_des << " L index des + "
@@ -2579,8 +2595,7 @@ FUNCTION dvariable logisticnorm_negLL(dvector obsP, dvar_vector estP, prevariabl
 
 REPORT_SECTION
   //The report section is used to write output to the standard output "filename.rep"
-  
-  report << "observed catch" << endl << obs_C << endl;
+   report << "observed catch" << endl << obs_C << endl;
   report << "estimated catch" << endl << est_region_C << endl;
   //report << "observed index" << endl << obs_I << endl;
   //report << "estimated index" << endl << est_I << endl;
@@ -2609,18 +2624,18 @@ REPORT_SECTION
   
     ofstream ioaout("ioa.txt");
     {
-        ioaout << "agegroup survey year timestep obsioa predioa" << endl;
+        ioaout << "agegroup survey year timestep obsioa predioa sd" << endl;
         for(y=fmyear;y<=lmyear;y++)
         {
-          ioaout << "1-15" << " " <<  "DE30" << " " << y << " " << "2" << " "<< log(obs_I_de30(y)+0.00001) << " " << log(est_I_de30(y)+0.00001) << endl;
-          ioaout << "2-15" << " " << "MD" << " " << y << " " << "1" << " "<< log(obs_I_md(y)+0.00001) << " " << log(est_I_md(y)+0.00001) << endl;
-          ioaout << "2-15" << " " << "NJ" << " " << y << " " << "1" << " "<< log(obs_I_nj(y)+0.00001) << " " << log(est_I_nj(y)+0.00001) << endl;
-          ioaout << "2-13" << " " << "NY" << " " << y << " " << "2" << " "<< log(obs_I_ny(y)+0.00001) << " " << log(est_I_ny(y)+0.00001) << endl;
-          ioaout << "2-13" << " " << "DESSN" << " " << y << " " << "1" << " "<< log(obs_I_des(y)+0.00001) << " " << log(est_I_des(y)+0.00001) << endl;
+          ioaout << "1-15" << " " <<  "DE30" << " " << y << " " << "2" << " "<< log(obs_I_de30(y)+0.00001) << " " << log(est_I_de30(y)+0.00001) << " " << obs_I_CV_de30(y) <<  endl;
+          ioaout << "2-15" << " " << "MD" << " " << y << " " << "1" << " "<< log(obs_I_md(y)+0.00001) << " " << log(est_I_md(y)+0.00001) << " " << obs_I_CV_md(y) << endl;
+          ioaout << "2-15" << " " << "NJ" << " " << y << " " << "1" << " "<< log(obs_I_nj(y)+0.00001) << " " << log(est_I_nj(y)+0.00001) << " " << obs_I_CV_nj(y) << endl;
+          ioaout << "2-13" << " " << "NY" << " " << y << " " << "2" << " "<< log(obs_I_ny(y)+0.00001) << " " << log(est_I_ny(y)+0.00001) << " " << obs_I_CV_ny(y) << endl;
+          ioaout << "2-13" << " " << "DESSN" << " " << y << " " << "1" << " "<< log(obs_I_des(y)+0.00001) << " " << log(est_I_des(y)+0.00001) << " " << obs_I_CV_des(y) << endl;
           for(t=1;t<=tstep;t++)
           {
-             ioaout << "1-15" << " " << "cm" << " " << y << " " << t << " "<< log(obs_I_cm(t,y)+0.00001) << " " << log(est_I_cm(t,y)+0.00001) << endl;
-            ioaout << "1-15" <<  " " << "ct" << " " << y << " " << t << " "<< log(obs_I_ct(t,y)+0.00001) << " " << log(est_I_ct(t,y)+0.00001) << endl;
+             ioaout << "1-15" << " " << "cm" << " " << y << " " << t << " "<< log(obs_I_cm(t,y)+0.00001) << " " << log(est_I_cm(t,y)+0.00001) << " " << obs_I_CV_cm(t,y) << endl;
+            ioaout << "1-15" <<  " " << "ct" << " " << y << " " << t << " "<< log(obs_I_ct(t,y)+0.00001) << " " << log(est_I_ct(t,y)+0.00001) << " " << obs_I_CV_ct(t,y) << endl;
           }//close timestep
        }//close year
      }//close ofstream
@@ -2628,7 +2643,7 @@ REPORT_SECTION
   
    ofstream obscaa("ocaa.txt");//obs fishery catch at age
    {
-     obscaa << " region timestep year age obscaa estcaa standardresid" << endl;
+     obscaa << " region timestep year age obscat obscaa estcaa standardresid" << endl;
      for(y=fmyear;y<=lmyear;y++)
      {
        for(t=1;t<=tstep;t++)
@@ -2637,7 +2652,7 @@ REPORT_SECTION
            {
              for(r=1;r<=region;r++)
              { 
-               obscaa << " " << r << " " << t << " " << y << " " << a << " " <<  log(obs_Cp(r,t,y,a)) << " " << log(est_region_Cp(r,t,y,a)) << " " <<  (obs_Cp(r,t,y,a)-est_region_Cp(r,t,y,a))/sqrt(C_var(r,t,y)) << endl;
+               obscaa << " " << r << " " << t << " " << y << " " << a << " " << obs_C(r,t,y)*obs_Cp(r,t,y,a) << " " <<  obs_Cp(r,t,y,a) << " " << est_region_Cp(r,t,y,a) << " " <<  log((obs_Cp(r,t,y,a)-est_region_Cp(r,t,y,a))+0.001)/sqrt(log(obs_Cp(r,t,y,a)+0.001)) << endl;
              }//close region
            }//close age      
      }//close tstep
@@ -2646,12 +2661,12 @@ REPORT_SECTION
    
    ofstream obssaa("osaa.txt");
    {
-     obssaa << "agegroup survey year timestep age obssaa estsaa standardresid" << endl;
+     obssaa << "agegroup survey year timestep age obscat obssaa estsaa standardresid" << endl;
      for(y=fmyear;y<=lmyear;y++)
      {
        for(a=sfage_a;a<=slage_a;a++)
        {
-         if(obs_Ip_de30(y,a)!=-99) obssaa << "1-15 " << " " << "de30"  << " " << y << " " << "2" << " " << a << " " <<  log(obs_Ip_de30(y,a)) << " " <<  log(est_Ip_de30(y,a)) << " " << (obs_Ip_de30(y,a)-est_Ip_de30(y,a))/sqrt(I_var_de30(y)) << endl;
+         if(obs_Ip_de30(y,a)!=-99) obssaa << "1-15 " << " " << "de30"  << " " << y << " " << "2" << " " << a << " " << obs_I_de30(y)*obs_Ip_de30(y,a) << " " <<  obs_Ip_de30(y,a) << " " <<  est_Ip_de30(y,a) << " " << (obs_Ip_de30(y,a)-est_Ip_de30(y,a))/sqrt(I_var_de30(y)) << endl;
        }//close age
      }//close year
      //obssaa << "agegroup survey year timestep age obssaa estsaa standardresid" << endl;
@@ -2661,8 +2676,8 @@ REPORT_SECTION
        {
        for(t=1;t<=tstep;t++)
          {
-           if(obs_Ip_cm(t,y,a)!=-99) obssaa << "1-15" << " " << "cm"  << " " << y << " " << t << " " << a << " " <<  log(obs_Ip_cm(t,y,a)) << " " <<  log(est_Ip_cm(t,y,a)) << " " << (obs_Ip_cm(t,y,a)-est_Ip_cm(t,y,a))/sqrt(I_var_cm(t,y)) << endl;
-           if(obs_Ip_ct(t,y,a)!=-99) obssaa << "1-15" << " " << "ct"  << " " << y << " " << t << " " << a << " " <<  log(obs_Ip_ct(t,y,a)) << " " <<  log(est_Ip_ct(t,y,a)) << " " << (obs_Ip_ct(t,y,a)-est_Ip_ct(t,y,a))/sqrt(I_var_ct(t,y)) << endl;
+           if(obs_Ip_cm(t,y,a)!=-99) obssaa << "1-15" << " " << "cm"  << " " << y << " " << t << " " << a << " " << obs_I_cm(t,y)*obs_Ip_cm(t,y,a) << " " <<  obs_Ip_cm(t,y,a) << " " <<  est_Ip_cm(t,y,a) << " " << (obs_Ip_cm(t,y,a)-est_Ip_cm(t,y,a))/sqrt(I_var_cm(t,y)) << endl;
+           if(obs_Ip_ct(t,y,a)!=-99) obssaa << "1-15" << " " << "ct"  << " " << y << " " << t << " " << a << " " << obs_I_ct(t,y)*obs_Ip_ct(t,y,a) << " " <<  obs_Ip_ct(t,y,a) << " " <<  est_Ip_ct(t,y,a) << " " << (obs_Ip_ct(t,y,a)-est_Ip_ct(t,y,a))/sqrt(I_var_ct(t,y)) << endl;
          }//close tstep
        }//close age
      }//close year
@@ -2671,16 +2686,16 @@ REPORT_SECTION
     {
       for(a=sfage_b;a<=slage_b;a++)
       {
-         if(obs_Ip_nj(y,a)!=-99) obssaa << "2-15" << " " << "nj"  << " " << y <<  " " << "1" << " " << a << " " <<  log(obs_Ip_nj(y,a)) << " " <<  log(est_Ip_nj(y,a)) << " " << (obs_Ip_nj(y,a)-est_Ip_nj(y,a))/sqrt(I_var_nj(y)) << endl;
-         if(obs_Ip_md(y,a)!=-99) obssaa << "2-15" << " " << "md"  << " " << y << " " << "1" << " " << a << " " <<  log(obs_Ip_md(y,a)) << " " <<  log(est_Ip_md(y,a)) << " " << (obs_Ip_md(y,a)-est_Ip_md(y,a))/sqrt(I_var_md(y)) << endl;
+         if(obs_Ip_nj(y,a)!=-99) obssaa << "2-15" << " " << "nj"  << " " << y <<  " " << "1" << " " << a << " " << obs_I_nj(y)*obs_Ip_nj(y,a) << " " << obs_Ip_nj(y,a) << " " <<  est_Ip_nj(y,a) << " " << (obs_Ip_nj(y,a)-est_Ip_nj(y,a))/sqrt(I_var_nj(y)) << endl;
+         if(obs_Ip_md(y,a)!=-99) obssaa << "2-15" << " " << "md"  << " " << y << " " << "1" << " " << a << " " <<  obs_I_md(y)*obs_Ip_md(y,a) << " " << obs_Ip_md(y,a) << " " <<  est_Ip_md(y,a) << " " << (obs_Ip_md(y,a)-est_Ip_md(y,a))/sqrt(I_var_md(y)) << endl;
       }//close age
     }//close year
     for(y=fmyear;y<=lmyear;y++)
     {
       for(a=sfage_c;a<=slage_c;a++)
       {
-         if(obs_Ip_ny(y,a)!=-99) obssaa << "2-13" << " " << "ny"  << " " << y  << " " << "2" << " " << a << " " <<  log(obs_Ip_ny(y,a)) << " " <<  log(est_Ip_ny(y,a)) << " " << (obs_Ip_ny(y,a)-est_Ip_ny(y,a))/sqrt(I_var_ny(y)) << endl;
-         if(obs_Ip_des(y,a)!=-99) obssaa << "2-13" << " " << "des"  << " " << y << " " << "1" << " " << a << " " <<  log(obs_Ip_des(y,a)) << " " <<  log(est_Ip_des(y,a)) << " " << (obs_Ip_des(y,a)-est_Ip_des(y,a))/sqrt(I_var_des(y)) << endl;
+         if(obs_Ip_ny(y,a)!=-99) obssaa << "2-13" << " " << "ny"  << " " << y  << " " << "2" << " " << a << " " << obs_I_ny(y)*obs_Ip_ny(y,a) << " " << obs_Ip_ny(y,a) << " " <<  est_Ip_ny(y,a) << " " << (obs_Ip_ny(y,a)-est_Ip_ny(y,a))/sqrt(I_var_ny(y)) << endl;
+         if(obs_Ip_des(y,a)!=-99) obssaa << "2-13" << " " << "des"  << " " << y << " " << "1" << " " << a << " " << obs_I_des(y)*obs_Ip_des(y,a) << " " << obs_Ip_des(y,a) << " " <<  est_Ip_des(y,a) << " " << (obs_Ip_des(y,a)-est_Ip_des(y,a))/sqrt(I_var_des(y)) << endl;
        }//close age
      }//close year
    }//close of stream
@@ -2730,30 +2745,30 @@ REPORT_SECTION
 
    ofstream obsage1("age1.txt");
    {
-     obsage1 << "survey year timestep obs est " << endl;
+     obsage1 << "survey year timestep obs est sd" << endl;
      for(y=fmyear;y<=lmyear;y++)
      {
-       if(obs_I_age1m(y)!=-99) obsage1 << "md" << " "  << y << " " << "2" << " "  <<  log(obs_I_age1m(y)) << " " <<  log(est_I_age1m(y)) << endl;
+       if(obs_I_age1m(y)!=-99) obsage1 << "md" << " "  << y << " " << "2" << " "  <<  log(obs_I_age1m(y)+0.001) << " " <<  log(est_I_age1m(y)+0.001) << " " << obs_I_age1m_CV(y) <<  endl;
        for(o=1;o<=age1surv;o++)
        {
-           if(obs_I_age1n(o,y)!=-99) obsage1 << "ny"  << " " << y << " " <<  "2" << " "  <<  log(obs_I_age1n(o,y)) << " " <<  log(est_I_age1n(o,y)) << endl;
+           if(obs_I_age1n(o,y)!=-99) obsage1 << "ny"  << " " << y << " " <<  "2" << " "  <<  log(obs_I_age1n(o,y)+0.001) << " " <<  log(est_I_age1n(o,y)+0.001) << " " << obs_I_age1n_CV(o,y) << endl;
        }
      }
    }
 
    ofstream obsyoy("yoy.txt");
    {
-     obsyoy << "region survey year obsyoy estyoy " << endl;
+     obsyoy << "region survey year obsyoy estyoy sd" << endl;
      for(y=fmyear;y<=lmyear;y++)
      {
       for(z=1;z<=yoysurv_coast;z++)
       {
               
-        if(obs_I_yoy_coast(z,y)!=-99) obsyoy << "coast" << " " <<  z  << " " << y << " " <<  log(obs_I_yoy_coast(z,y)) << " " <<  log(est_I_yoy_coast(z,y)) << endl;
+        if(obs_I_yoy_coast(z,y)!=-99) obsyoy << "coast" << " " <<  z  << " " << y << " " <<  log(obs_I_yoy_coast(z,y)+0.001) << " " <<  log(est_I_yoy_coast(z,y)+0.001) << " " << obs_I_yoy_CV_coast(z,y) << endl;
        }//close z loop
       for(z=1;z<=yoysurv_bay;z++)
       {
-        if(obs_I_yoy_bay(z,y)!=-99) obsyoy  << "bay" << " " << z << " " << y << " " <<  log(obs_I_yoy_bay(z,y)) << " " <<  log(est_I_yoy_bay(z,y)) << endl;
+        if(obs_I_yoy_bay(z,y)!=-99) obsyoy  << "bay" << " " << z << " " << y << " " <<  log(obs_I_yoy_bay(z,y)+0.001) << " " <<  log(est_I_yoy_bay(z,y)+0.001) << " " << obs_I_yoy_CV_bay(z,y) <<  endl;
    }//close z loop
      }//close year loop
    }//close of stream
@@ -2889,17 +2904,14 @@ REPORT_SECTION
 
    ofstream ssb("ssb.txt");//spawning stock biomass
    {
-     ssb << "stock region year age ssb" << endl;
+     ssb << "stock region year ssb" << endl;
        for(s=1;s<=stock;s++)
        {
          for(r=1;r<=region;r++)
          {
            for(y=fmyear;y<=lmyear;y++)
            {
-             for(a=fage;a<=lage;a++)
-             {
-               ssb << " " << s <<  " " << r << " " << y  << " " << a << " " << SSB(s,r,y,a) << endl;
-             }
+              ssb << " " << s <<  " " << r << " " << y  << " " << SSB(s,r,y) << endl;
            }//close year loop
          }//close region 
        }//close stock loop
@@ -2922,6 +2934,7 @@ REPORT_SECTION
          }//close region 
        }//close stock loop
     }//close ofstream
+
 
 RUNTIME_SECTION
 
