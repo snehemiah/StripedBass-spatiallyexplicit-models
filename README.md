@@ -1,7 +1,7 @@
 # StripedBass-spatiallyexplicit-models
 
 # Background
-This project aimed to develop a spatially-explicit statistical catch-at-age model to estimate abundance and fishing mortality rates of Atlantic Striped Bass in the Chesapeake Bay and along the Atlantic coast. This repository has the final versions of the multi-stock, spatially-explicit model code (.tpl) and dat file (.dat) for  Atlantic Striped Bass that were developed by Samara Nehemiah for her Ph.D. studies at the Chesapeake Biological Laboratory. All models were developed in ADMB (https://www.admb-project.org/). 
+This project aimed to develop a spatially-explicit statistical catch-at-age model to estimate abundance and fishing mortality rates of Atlantic Striped Bass in the Chesapeake Bay and along the Atlantic coast. This repository has the final versions of the multi-stock, spatially-explicit model code (.tpl) and dat file (.dat) for  Atlantic Striped Bass that were developed by Samara Nehemiah during her Ph.D. research at the Chesapeake Biological Laboratory. All models were developed in ADMB (https://www.admb-project.org/). 
 
 # Model Description
 Each model is a two spawning stock (Atlantic Coast and Chesapeake Bay), two area (Ocean and Chesapeake Bay) model that estimates abundance, movement, fishing mortality, and biomass at two 6-month time-steps from 1982-2017. This model assumes logisitc selectivitiy in the Ocean fishery and double logistic in the Bay fishery. There are 7 fisheries independey adult surveys used as data inputs, including 2 in the Bay and 5 in the Ocean. There are two age-1 surveys, including one in each region. There are 3 young-of-the-year surveys, including two in the Ocean region and one aggregate survey in the Chesapeake Bay. The four models evalauted different in their assumptions of natural mortality and ageing error. 
@@ -20,6 +20,6 @@ This work was funded by the NOAA Chesapeake Bay Office and the NMFS/Sea Grant Po
 Nehemiah, S., R. Latour, A. Schonfeld, G. Nelson, D. Secor, and M.J. Wilberg. Effects of ageing error and natural mortality assumptions on spatially-explicit estimates of abundance and fishing mortality of striped bass. In preparation.
 
 # Contact
-If you have any questions, please contact Samara (she/her) at snehemiah@umces.edu. 
+If you have any questions, please contact Samara (she/her). Current email: snehemiah@asmfc.org. 
 
 <img src="https://www.umces.edu/sites/default/files/UMCES-CBL-logo.jpg" jsaction="" class="sFlh5c pT0Scc iPVvYb" style="max-width: 600px; height: 221px; margin: 0px; width: 557px;" alt="UMCES CBL logo.jpg | University of Maryland Center for Environmental Science" jsname="kn3ccd" aria-hidden="false">
